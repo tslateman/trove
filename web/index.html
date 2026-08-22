@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trove</title>
+<style>
+:root {
+  --bg: #fbfaf8; --panel: #ffffff; --ink: #1a1815; --muted: #6b6560;
+  --line: #e6e1d9; --accent: #b4541e; --accent-soft: #f5e9e1;
+  --ok: #2f6b45; --ok-soft: #e5efe8; --warn: #8a6d1f; --warn-soft: #f7efd8;
+  --shadow: 0 1px 2px rgba(26,24,21,.05), 0 4px 16px rgba(26,24,21,.04);
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+:root:not([data-theme=light]) { }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) {
+    --bg: #14130f; --panel: #1c1a16; --ink: #ece7de; --muted: #918a80;
+    --line: #2e2b25; --accent: #e08b52; --accent-soft: #2c211a;
+    --ok: #7fb894; --ok-soft: #1c2a21; --warn: #d4b25e; --warn-soft: #2a2517;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.2);
+  }
+}
+:root[data-theme=dark] {
+  --bg: #14130f; --panel: #1c1a16; --ink: #ece7de; --muted: #918a80;
+  --line: #2e2b25; --accent: #e08b52; --accent-soft: #2c211a;
+  --ok: #7fb894; --ok-soft: #1c2a21; --warn: #d4b25e; --warn-soft: #2a2517;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.2);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+header {
+  position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px); border-bottom: 1px solid var(--line);
+}
+.bar { max-width: 1280px; margin: 0 auto; padding: 14px 24px; display: flex; gap: 18px; align-items: center; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand b { font-size: 19px; letter-spacing: -.02em; }
+.brand span { color: var(--muted); font-size: 13px; }
+.search { flex: 1; position: relative; max-width: 520px; }
+.search input {
+  width: 100%; padding: 9px 12px 9px 34px; border-radius: 9px; font: inherit;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+}
+.search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+.search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); opacity: .45; }
+.kbd {
+  position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font: 11px/1 var(--mono);
+  color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; pointer-events: none;
+}
+.totals { margin-left: auto; font: 12px/1.4 var(--mono); color: var(--muted); text-align: right; white-space: nowrap; }
+.totals b { color: var(--ink); }
+.iconbtn { border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 8px;
+  padding: 7px 9px; cursor: pointer; font-size: 13px; }
+.iconbtn:hover { color: var(--ink); border-color: var(--accent); }
+
+main { max-width: 1280px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 208px 1fr; gap: 28px; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { order: 2; } }
+
+aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh - 100px); overflow-y: auto; }
+.facet { margin-bottom: 22px; }
+.facet h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
+.facet button {
+  display: flex; width: 100%; justify-content: space-between; gap: 8px; align-items: center;
+  padding: 5px 8px; border: 0; border-radius: 7px; background: none; color: var(--ink);
+  font: inherit; font-size: 13.5px; cursor: pointer; text-align: left;
+}
+.facet button:hover { background: var(--panel); }
+.facet button[aria-pressed=true] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.facet button i { font-style: normal; font: 11px/1 var(--mono); color: var(--muted); }
+.facet button[aria-pressed=true] i { color: var(--accent); }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 18px; }
+.tabs button { border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  padding: 6px 14px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; }
+.tabs button[aria-pressed=true] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(304px, 1fr)); gap: 14px; }
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 15px 16px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 9px; position: relative;
+  transition: border-color .12s, transform .12s;
+}
+.card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.card.picked { border-color: var(--accent); }
+.card h4 { margin: 0; font: 600 15px/1.3 var(--mono); letter-spacing: -.01em; padding-right: 28px; }
+.card p { margin: 0; font-size: 13.2px; color: var(--muted); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.card .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; align-items: center; }
+.pill { font: 11px/1 var(--mono); padding: 4px 7px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
+.pill.cat { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+.pill.tok { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
+.pill.inv { background: transparent; }
+.pill.lint { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.pick {
+  position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--bg); color: transparent; cursor: pointer;
+  font: 13px/1 sans-serif; display: grid; place-items: center; padding: 0;
+}
+.pick:hover { border-color: var(--accent); }
+.card.picked .pick { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.stack {
+  position: fixed; right: 22px; bottom: 22px; width: 340px; z-index: 30;
+  background: var(--panel); border: 1px solid var(--accent); border-radius: 13px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18); overflow: hidden;
+}
+.stack.hidden { display: none; }
+.stack header { position: static; background: none; border: 0; }
+.stack .top { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.stack .top b { font-size: 14px; }
+.stack .top span { margin-left: auto; font: 12px/1 var(--mono); color: var(--muted); }
+.budget { height: 5px; background: var(--line); }
+.budget div { height: 100%; background: var(--ok); transition: width .2s, background .2s; }
+.budget div.over { background: var(--accent); }
+.stack .body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.stack .body p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.stack pre {
+  margin: 0; max-height: 190px; overflow: auto; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px; font: 11.5px/1.5 var(--mono); white-space: pre;
+}
+.stack .row { display: flex; gap: 8px; }
+.stack .row button { flex: 1; border-radius: 8px; border: 1px solid var(--line); background: var(--bg);
+  color: var(--ink); padding: 7px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.stack .row button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.empty { padding: 60px 0; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><b>Trove</b><span id="regname"></span></div>
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search skills, descriptions, tags" autocomplete="off">
+      <span class="kbd">⌘K</span>
+    </div>
+    <div class="totals" id="totals"></div>
+    <button class="iconbtn" id="theme" title="Toggle theme">◐</button>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <div class="facet"><h3>Category</h3><div id="f-cat"></div></div>
+    <div class="facet"><h3>Plugin</h3><div id="f-plug"></div></div>
+    <div class="facet"><h3>Flags</h3><div id="f-flag"></div></div>
+  </aside>
+  <section>
+    <div class="tabs">
+      <button id="t-skills" aria-pressed="true">Skills</button>
+      <button id="t-plugins" aria-pressed="false">Plugins</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" hidden>Nothing matches.</div>
+  </section>
+</main>
+
+<div class="stack hidden" id="stack">
+  <div class="top"><b>Your stack</b><span id="stackcount"></span></div>
+  <div class="budget"><div id="budgetfill"></div></div>
+  <div class="body">
+    <p id="budgettext"></p>
+    <pre id="snippet"></pre>
+    <div class="row">
+      <button id="copy" class="primary">Copy bundle</button>
+      <button id="clear">Clear</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const BUDGET = 5000;
+const state = { data: null, q: "", cat: null, plug: null, flag: null, view: "skills", picked: new Set() };
+const $ = (id) => document.getElementById(id);
+
+fetch("catalog.json").then(r => r.json()).then(d => { state.data = d; boot(); });
+
+function boot() {
+  $("regname").textContent = state.data.registry;
+  $("totals").innerHTML =
+    `<b>${state.data.totals.skills}</b> skills · <b>${state.data.totals.alwaysOn.toLocaleString()}</b> tok always-on`;
+  $("q").addEventListener("input", e => { state.q = e.target.value.toLowerCase(); render(); });
+  $("t-skills").onclick = () => setView("skills");
+  $("t-plugins").onclick = () => setView("plugins");
+  $("clear").onclick = () => { state.picked.clear(); render(); };
+  $("copy").onclick = copyBundle;
+  $("theme").onclick = toggleTheme;
+  addEventListener("keydown", e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); $("q").focus(); $("q").select(); }
+    if (e.key === "Escape") { $("q").blur(); }
+  });
+  render();
+}
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+}
+
+function setView(v) {
+  state.view = v;
+  $("t-skills").setAttribute("aria-pressed", v === "skills");
+  $("t-plugins").setAttribute("aria-pressed", v === "plugins");
+  render();
+}
+
+function matches(s) {
+  if (state.cat && s.category !== state.cat) return false;
+  if (state.plug && !s.plugins.includes(state.plug)) return false;
+  if (state.flag === "lint" && s.strictYaml) return false;
+  if (state.flag === "picked" && !state.picked.has(s.name)) return false;
+  if (!state.q) return true;
+  return (s.name + " " + s.description + " " + (s.tags || []).join(" ")).toLowerCase().includes(state.q);
+}
+
+function facet(host, entries, key) {
+  host.innerHTML = "";
+  for (const [label, count] of entries) {
+    const b = document.createElement("button");
+    b.innerHTML = `<span>${label}</span><i>${count}</i>`;
+    b.setAttribute("aria-pressed", state[key] === label);
+    b.onclick = () => { state[key] = state[key] === label ? null : label; render(); };
+    host.appendChild(b);
+  }
+}
+
+function render() {
+  const skills = state.data.skills;
+  const tally = (fn) => {
+    const m = new Map();
+    for (const s of skills) for (const v of [].concat(fn(s))) m.set(v, (m.get(v) || 0) + 1);
+    return [...m].sort((a, b) => b[1] - a[1]);
+  };
+  facet($("f-cat"), tally(s => s.category), "cat");
+  facet($("f-plug"), tally(s => s.plugins), "plug");
+  facet($("f-flag"), [
+    ["lint", skills.filter(s => !s.strictYaml).length],
+    ["picked", state.picked.size],
+  ], "flag");
+
+  const grid = $("grid");
+  grid.innerHTML = "";
+  const rows = state.view === "skills" ? skills.filter(matches) : state.data.plugins;
+  $("empty").hidden = rows.length > 0;
+
+  for (const r of rows) {
+    const card = document.createElement("article");
+    card.className = "card" + (state.view === "skills" && state.picked.has(r.name) ? " picked" : "");
+    const meta = state.view === "skills"
+      ? `<span class="pill cat">${r.category}</span>
+         <span class="pill tok">+${r.tokensAlwaysOn} always-on</span>
+         <span class="pill inv">${(r.tokensOnInvoke / 1000).toFixed(1)}k on invoke</span>
+         ${r.strictYaml ? "" : '<span class="pill lint">yaml</span>'}`
+      : `<span class="pill cat">${r.category || "—"}</span>
+         ${r.curated ? '<span class="pill tok">curated</span>' : ""}
+         ${(r.tags || []).slice(0, 3).map(t => `<span class="pill">${t}</span>`).join("")}`;
+    card.innerHTML = `
+      ${state.view === "skills" ? '<button class="pick">✓</button>' : ""}
+      <h4>${r.name}</h4>
+      <p>${escapeHtml(r.description || "")}</p>
+      <div class="meta">${meta}</div>`;
+    if (state.view === "skills") {
+      card.querySelector(".pick").onclick = () => {
+        state.picked.has(r.name) ? state.picked.delete(r.name) : state.picked.add(r.name);
+        render();
+      };
+    }
+    grid.appendChild(card);
+  }
+  renderStack();
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function renderStack() {
+  const chosen = state.data.skills.filter(s => state.picked.has(s.name));
+  $("stack").classList.toggle("hidden", chosen.length === 0);
+  if (!chosen.length) return;
+  const cost = chosen.reduce((n, s) => n + s.tokensAlwaysOn, 0);
+  const pct = Math.min(100, (cost / BUDGET) * 100);
+  $("stackcount").textContent = `${chosen.length} skills`;
+  $("budgetfill").style.width = pct + "%";
+  $("budgetfill").classList.toggle("over", cost > BUDGET);
+  $("budgettext").innerHTML = `<b>${cost.toLocaleString()}</b> / ${BUDGET.toLocaleString()} tok always-on` +
+    (cost > BUDGET ? " — over budget" : "");
+  $("snippet").textContent = bundleYaml(chosen);
+}
+
+function bundleYaml(chosen) {
+  const bySource = {};
+  for (const s of chosen) (bySource[s.source] ||= []).push(s.path);
+  const lines = ["  - name: my-stack", "    source: " + Object.keys(bySource)[0],
+    "    description: Curated stack", "    skills:"];
+  for (const paths of Object.values(bySource)) for (const p of paths.sort()) lines.push(`      - ${p}`);
+  return lines.join("\n");
+}
+
+function copyBundle() {
+  navigator.clipboard.writeText($("snippet").textContent).then(() => {
+    const b = $("copy"); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy bundle", 1200);
+  });
+}
+</script>
+</body>
+</html>
