@@ -21,18 +21,25 @@ and it prices every skill so a bundle can be held to a budget.
 ## Install
 
 ```bash
-uv sync --all-groups
+just setup
 ```
 
 ## Use
 
 ```bash
-uv run trove scan            # index skills, report token cost per source
-uv run trove build           # bundle.yaml -> marketplace.json, sha-pinned
-uv run trove catalog         # catalog.json + the static site
-uv run trove serve           # browse at http://127.0.0.1:8787
-uv run trove calibrate skills skills@local   # check estimates against Claude Code
+just scan          # index skills, report token cost per source
+just build         # bundle.yaml -> marketplace.json, sha-pinned
+just catalog       # catalog.json + the static site
+just serve         # browse at http://127.0.0.1:8787
+just dist          # build and catalog together, ready to publish
+
+just orphans       # skills no plugin ships
+just lint-skills   # skills whose frontmatter fails a strict YAML parse
+just calibrate skills skills@local   # check estimates against Claude Code
 ```
+
+`just --list` shows the rest. Every recipe takes its bundle from the `bundle`
+variable, so `just --set bundle bundles/team.yaml catalog` targets another one.
 
 ## The bundle
 
@@ -111,8 +118,15 @@ so the registry can nudge without breaking.
 ## Development
 
 ```bash
-uv run pytest
+just test      # unit tests
+just verify    # drive the built catalog headless, assert it renders
+just check     # formatting, tests, and the UI check — what CI runs
+just shots     # catalog screenshots in both themes
 ```
+
+`just verify` serves the site, drives it in headless Chromium in light and dark,
+and fails if the card count drifts from the catalog, a console error fires, the
+budget readout goes missing, or the generated bundle omits a picked skill.
 
 ## License
 

@@ -199,3 +199,18 @@ def test_whole_repo_plugin_does_not_stamp_its_tags_on_every_skill(tmp_path):
     catalog = build_catalog(load_bundle(bundle))
     assert {r["name"] for r in catalog["skills"]} == {"go-review", "excalidraw"}
     assert all(r["tags"] == [] for r in catalog["skills"])
+
+
+def test_cli_reports_config_errors_without_a_traceback(tmp_path, capsys):
+    from trove.cli import main
+
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        "name: t\nsources:\n  a: {repo: o/a}\n"
+        "plugins:\n  - {name: p, source: nope, description: d}\n"
+    )
+    code = main(["--bundle", str(bundle), "--out", str(tmp_path), "build", "--no-pin"])
+    assert code == 1
+    err = capsys.readouterr().err
+    assert err.startswith("trove: ")
+    assert "Traceback" not in err

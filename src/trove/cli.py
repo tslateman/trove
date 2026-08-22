@@ -136,7 +136,11 @@ def main(argv: list[str] | None = None) -> int:
     serve.set_defaults(func=cmd_serve)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (RuntimeError, ValueError, KeyError) as exc:
+        print(f"trove: {exc.args[0] if exc.args else exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
