@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -55,9 +56,7 @@ def cmd_catalog(args: argparse.Namespace) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     target = args.out / "catalog.json"
     target.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
-    web = Path(__file__).resolve().parents[2] / "web"
-    for asset in web.iterdir():
-        (args.out / asset.name).write_bytes(asset.read_bytes())
+    shutil.copytree(Path(__file__).parent / "web", args.out, dirs_exist_ok=True)
     print(
         f"wrote {target}: {catalog['totals']['skills']} skills, "
         f"~{catalog['totals']['alwaysOn']:,} tok always-on"

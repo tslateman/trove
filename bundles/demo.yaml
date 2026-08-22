@@ -1,0 +1,27 @@
+name: demo
+description: Hermetic fixture registry used by the test suite and CI
+owner:
+  name: Trove
+
+sources:
+  demo:
+    repo: trove/demo
+    local: ../tests/fixtures/demo-repo
+
+plugins:
+  - name: demo
+    source: demo
+    version: 0.1.0
+    category: development
+    description: Every fixture skill
+    tags: [demo]
+
+  - name: demo-review-kit
+    source: demo
+    version: 0.1.0
+    displayName: Demo Review Kit
+    category: development
+    description: Only the review fixture skill
+    tags: [review, demo]
+    skills:
+      - skills/review/demo-review

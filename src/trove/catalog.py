@@ -7,7 +7,7 @@ from .scan import scan_source
 def selects(spec, skill) -> bool:
     if not spec.skills:
         return True
-    return any(skill.rel_path == path.lstrip("./") for path in spec.skills)
+    return skill.rel_path in spec.selected_paths
 
 
 def build_catalog(bundle: Bundle) -> dict:

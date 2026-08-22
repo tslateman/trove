@@ -7,10 +7,11 @@ import yaml
 from .models import Bundle, PluginSpec, Source
 
 
-def expand(value: str | None) -> Path | None:
+def expand(value: str | None, base: Path) -> Path | None:
     if value is None:
         return None
-    return Path(value).expanduser()
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else (base / path).resolve()
 
 
 def load_bundle(path: Path) -> Bundle:
@@ -23,7 +24,7 @@ def load_bundle(path: Path) -> Bundle:
             url=spec.get("url"),
             ref=spec.get("ref"),
             path=spec.get("path"),
-            local=expand(spec.get("local")),
+            local=expand(spec.get("local"), path.parent),
         )
         for key, spec in (data.get("sources") or {}).items()
     }

@@ -8,6 +8,27 @@ from . import frontmatter
 from .models import Skill, Source
 
 
+def read_metadata(text: str) -> tuple[dict[str, str], str]:
+    fields, body = frontmatter.split(text)
+    strict = strict_yaml_parse(text)
+    if isinstance(strict, dict):
+        for key in ("name", "description"):
+            value = strict.get(key)
+            if isinstance(value, str):
+                fields[key] = value
+    return fields, body
+
+
+def strict_yaml_parse(text: str):
+    if not text.startswith("---"):
+        return None
+    raw = text.partition("---")[2].partition("\n---")[0]
+    try:
+        return yaml.safe_load(raw)
+    except yaml.YAMLError:
+        return None
+
+
 def strict_yaml_ok(text: str) -> bool:
     if not text.startswith("---"):
         return True
@@ -39,15 +60,17 @@ def category_for(rel_path: str, source_key: str) -> str:
 
 def scan_source(source: Source) -> list[Skill]:
     root = source.local
-    if root is None or not root.exists():
+    if root is None:
         return []
+    if not root.exists():
+        raise ValueError(f"source {source.key!r}: local path {root} does not exist")
     skills = []
     for skill_file in sorted(root.rglob("SKILL.md")):
         rel_dir = skill_file.parent.relative_to(root).as_posix()
         if not is_shipped(rel_dir):
             continue
-        text = skill_file.read_text(encoding="utf-8")
-        meta, body = frontmatter.split(text)
+        text = skill_file.read_text(encoding="utf-8-sig")
+        meta, body = read_metadata(text)
         name = meta.get("name") or skill_file.parent.name
         description = meta.get("description", "").strip()
         skills.append(

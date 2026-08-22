@@ -1,0 +1,40 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --all-groups
+      - run: uv run pytest -q
+
+  verify-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --all-groups
+      - run: uv run --with playwright playwright install --with-deps chromium
+      - run: uv run trove --bundle bundles/demo.yaml --out out catalog
+      - run: |
+          uv run trove --out out serve --port 8787 &
+          until curl -sf -o /dev/null http://127.0.0.1:8787/catalog.json; do sleep 0.2; done
+          uv run --with playwright python scripts/verify_ui.py --port 8787 --out out
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv build
+      - run: unzip -l dist/*.whl | grep -q 'trove/web/index.html'

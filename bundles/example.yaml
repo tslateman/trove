@@ -1,0 +1,50 @@
+name: example
+description: A starter registry — copy this, point it at your own repos
+owner:
+  name: Your Team
+
+sources:
+  # A whole repo of skills. `local` is optional and enables `trove scan`
+  # before the remote exists; it resolves relative to this file.
+  toolkit:
+    repo: your-org/skills
+    ref: main
+    # local: ~/dev/skills
+
+  # A plugin living in a subdirectory of a monorepo.
+  platform:
+    repo: your-org/monorepo
+    path: tooling/claude-plugin
+
+plugins:
+  # Ship a source's skills wholesale.
+  - name: toolkit
+    source: toolkit
+    version: 0.1.0
+    category: development
+    description: Everything the toolkit repo ships
+    homepage: https://github.com/your-org/skills
+    tags: [review, testing]
+
+  # Or cherry-pick a subset into a narrower plugin. Paths are relative to the
+  # source root and must match a skill directory the scanner finds.
+  - name: review-only
+    source: toolkit
+    version: 0.1.0
+    displayName: Review Only
+    category: development
+    description: Language review skills, without the rest of the catalog
+    tags: [review]
+    skills:
+      - skills/review/python-review
+      - skills/review/typescript-review
+
+  - name: platform
+    source: platform
+    version: 0.1.0
+    category: productivity
+    description: Internal platform tooling
+
+# Redirect a retired plugin name at its replacement so existing installs survive.
+renames:
+  old-toolkit: toolkit

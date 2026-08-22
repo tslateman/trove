@@ -27,7 +27,20 @@ def launch(playwright, executable: str | None):
     return playwright.chromium.launch()
 
 
-def check(page, url: str, expected_skills: int, shots: Path | None, theme: str) -> list[str]:
+XSS_PROBE = """() => {
+  const probe = '<img src=x onerror="window.__pwned=1">';
+  state.data.skills.push({name: probe, description: probe, category: probe, tags: [probe],
+    path: 'probe', source: 'probe', tokensAlwaysOn: 1, tokensOnInvoke: 1,
+    strictYaml: true, plugins: ['probe']});
+  render();
+  const injected = document.querySelectorAll('.grid img, aside img').length;
+  state.data.skills.pop();
+  render();
+  return injected;
+}"""
+
+
+def check(page, url: str, expected_skills: int, shots: Path | None, theme: str) -> tuple[list[str], str]:
     problems: list[str] = []
     console: list[str] = []
     page.on("console", lambda m: console.append(m.text) if m.type == "error" else None)
@@ -41,9 +54,6 @@ def check(page, url: str, expected_skills: int, shots: Path | None, theme: str) 
         problems.append(f"[{theme}] rendered {cards} cards, catalog has {expected_skills}")
     if page.locator("#f-cat button").count() == 0:
         problems.append(f"[{theme}] no category facets rendered")
-    if console:
-        problems.append(f"[{theme}] console errors: {console}")
-
     page.locator(".card .pick").first.click()
     page.wait_for_selector(".stack:not(.hidden)", timeout=3000)
     if "always-on" not in page.locator("#budgettext").inner_text():
@@ -60,12 +70,23 @@ def check(page, url: str, expected_skills: int, shots: Path | None, theme: str) 
     page.wait_for_timeout(200)
     if page.locator(".card").count() != 0:
         problems.append(f"[{theme}] search did not filter to zero on a nonsense query")
+    page.fill("#q", "")
+    page.wait_for_timeout(200)
+
+    injected = page.evaluate(XSS_PROBE)
+    if injected:
+        problems.append(
+            f"[{theme}] a hostile skill name/category/tag produced {injected} live element(s) — "
+            "an interpolation is missing escapeHtml"
+        )
+
+    background = page.evaluate("getComputedStyle(document.body).backgroundColor")
+    if console:
+        problems.append(f"[{theme}] console errors: {console}")
 
     if shots:
-        page.fill("#q", "")
-        page.wait_for_timeout(200)
         page.screenshot(path=str(shots / f"catalog-{theme}.png"))
-    return problems
+    return problems, background
 
 
 def main() -> int:
@@ -82,19 +103,39 @@ def main() -> int:
         args.shots.mkdir(parents=True, exist_ok=True)
 
     problems: list[str] = []
+    backgrounds = {}
     with sync_playwright() as p:
         browser = launch(p, find_browser())
         for theme in ("light", "dark"):
             page = browser.new_page(viewport={"width": 1340, "height": 940}, color_scheme=theme)
-            problems += check(page, url, expected, args.shots, theme)
+            found, backgrounds[theme] = check(page, url, expected, args.shots, theme)
+            problems += found
             page.close()
+
+        narrow = browser.new_page(viewport={"width": 390, "height": 800})
+        narrow.goto(url, wait_until="networkidle")
+        narrow.wait_for_selector(".card")
+        overflow = narrow.evaluate(
+            "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
+        )
+        if overflow > 0:
+            problems.append(f"[390px] page scrolls sideways by {overflow}px")
+        narrow.close()
         browser.close()
+
+    if backgrounds["light"] == backgrounds["dark"]:
+        problems.append(
+            f"both themes painted body {backgrounds['light']} — the dark palette is not applying"
+        )
 
     if problems:
         for problem in problems:
             print(problem, file=sys.stderr)
         return 1
-    print(f"ui ok: {expected} skills rendered in both themes, picking and search verified")
+    print(
+        f"ui ok: {expected} skills, both themes distinct, no sideways scroll at 390px, "
+        "picking, search, and hostile-input escaping verified"
+    )
     return 0
 
 

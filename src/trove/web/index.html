@@ -12,7 +12,6 @@
   --shadow: 0 1px 2px rgba(26,24,21,.05), 0 4px 16px rgba(26,24,21,.04);
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 }
-:root:not([data-theme=light]) { }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme=light]) {
     --bg: #14130f; --panel: #1c1a16; --ink: #ece7de; --muted: #918a80;
@@ -38,11 +37,11 @@ header {
   position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(12px); border-bottom: 1px solid var(--line);
 }
-.bar { max-width: 1280px; margin: 0 auto; padding: 14px 24px; display: flex; gap: 18px; align-items: center; }
+.bar { max-width: 1280px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; }
 .brand { display: flex; align-items: baseline; gap: 10px; }
 .brand b { font-size: 19px; letter-spacing: -.02em; }
 .brand span { color: var(--muted); font-size: 13px; }
-.search { flex: 1; position: relative; max-width: 520px; }
+.search { flex: 1 1 220px; min-width: 0; position: relative; max-width: 520px; }
 .search input {
   width: 100%; padding: 9px 12px 9px 34px; border-radius: 9px; font: inherit;
   border: 1px solid var(--line); background: var(--panel); color: var(--ink);
@@ -61,6 +60,7 @@ header {
 
 main { max-width: 1280px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 208px 1fr; gap: 28px; }
 @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { order: 2; } }
+@media (max-width: 560px) { .totals { display: none; } }
 
 aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh - 100px); overflow-y: auto; }
 .facet { margin-bottom: 22px; }
@@ -224,7 +224,7 @@ function facet(host, entries, key) {
   host.innerHTML = "";
   for (const [label, count] of entries) {
     const b = document.createElement("button");
-    b.innerHTML = `<span>${label}</span><i>${count}</i>`;
+    b.innerHTML = `<span>${escapeHtml(String(label))}</span><i>${count}</i>`;
     b.setAttribute("aria-pressed", state[key] === label);
     b.onclick = () => { state[key] = state[key] === label ? null : label; render(); };
     host.appendChild(b);
@@ -254,16 +254,16 @@ function render() {
     const card = document.createElement("article");
     card.className = "card" + (state.view === "skills" && state.picked.has(r.name) ? " picked" : "");
     const meta = state.view === "skills"
-      ? `<span class="pill cat">${r.category}</span>
+      ? `<span class="pill cat">${escapeHtml(r.category)}</span>
          <span class="pill tok">+${r.tokensAlwaysOn} always-on</span>
          <span class="pill inv">${(r.tokensOnInvoke / 1000).toFixed(1)}k on invoke</span>
          ${r.strictYaml ? "" : '<span class="pill lint">yaml</span>'}`
-      : `<span class="pill cat">${r.category || "—"}</span>
+      : `<span class="pill cat">${escapeHtml(r.category || "—")}</span>
          ${r.curated ? '<span class="pill tok">curated</span>' : ""}
-         ${(r.tags || []).slice(0, 3).map(t => `<span class="pill">${t}</span>`).join("")}`;
+         ${(r.tags || []).slice(0, 3).map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("")}`;
     card.innerHTML = `
       ${state.view === "skills" ? '<button class="pick">✓</button>' : ""}
-      <h4>${r.name}</h4>
+      <h4>${escapeHtml(r.name)}</h4>
       <p>${escapeHtml(r.description || "")}</p>
       <div class="meta">${meta}</div>`;
     if (state.view === "skills") {
@@ -278,7 +278,7 @@ function render() {
 }
 
 function escapeHtml(s) {
-  return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
 
 function renderStack() {
@@ -298,9 +298,14 @@ function renderStack() {
 function bundleYaml(chosen) {
   const bySource = {};
   for (const s of chosen) (bySource[s.source] ||= []).push(s.path);
-  const lines = ["  - name: my-stack", "    source: " + Object.keys(bySource)[0],
-    "    description: Curated stack", "    skills:"];
-  for (const paths of Object.values(bySource)) for (const p of paths.sort()) lines.push(`      - ${p}`);
+  const sources = Object.keys(bySource).sort();
+  const lines = [];
+  for (const source of sources) {
+    const name = sources.length > 1 ? `my-stack-${source}` : "my-stack";
+    lines.push(`  - name: ${name}`, `    source: ${source}`,
+      "    description: Curated stack", "    skills:");
+    for (const p of bySource[source].sort()) lines.push(`      - ${p}`);
+  }
   return lines.join("\n");
 }
 

@@ -214,3 +214,146 @@ def test_cli_reports_config_errors_without_a_traceback(tmp_path, capsys):
     err = capsys.readouterr().err
     assert err.startswith("trove: ")
     assert "Traceback" not in err
+
+
+# --- fixes from the pre-publish review ---
+
+import subprocess
+
+
+def _git(*args, cwd):
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
+
+
+def _repo_with_ambiguous_refs(tmp_path: Path) -> Path:
+    work = tmp_path / "work"
+    work.mkdir()
+    _git("init", "-q", "-b", "main", cwd=work)
+    _git("config", "user.email", "t@example.com", cwd=work)
+    _git("config", "user.name", "T", cwd=work)
+    (work / "f").write_text("x")
+    _git("add", "-A", cwd=work)
+    _git("commit", "-qm", "one", cwd=work)
+    _git("branch", "feature/main", cwd=work)
+    _git("branch", "release", cwd=work)
+    _git("tag", "-a", "release", "-m", "tagged", cwd=work)
+    _git("tag", "-a", "v1", "-m", "tagged", cwd=work)
+    return work
+
+
+def test_resolve_sha_ignores_refname_sort_order(tmp_path):
+    from trove.build import resolve_sha
+
+    work = _repo_with_ambiguous_refs(tmp_path)
+    expected = subprocess.run(
+        ["git", "rev-parse", "main"], cwd=work, capture_output=True, text=True, check=True
+    ).stdout.strip()
+    assert resolve_sha(Source(key="s", url=str(work), ref="main")) == expected
+
+
+def test_resolve_sha_refuses_a_tag_and_branch_collision(tmp_path):
+    from trove.build import resolve_sha
+
+    work = _repo_with_ambiguous_refs(tmp_path)
+    with pytest.raises(ValueError, match="matches both"):
+        resolve_sha(Source(key="s", url=str(work), ref="release"))
+
+
+def test_resolve_sha_peels_an_annotated_tag_to_its_commit(tmp_path):
+    from trove.build import resolve_sha
+
+    work = _repo_with_ambiguous_refs(tmp_path)
+    sha = resolve_sha(Source(key="s", url=str(work), ref="v1"))
+    kind = subprocess.run(
+        ["git", "cat-file", "-t", sha], cwd=work, capture_output=True, text=True, check=True
+    ).stdout.strip()
+    assert kind == "commit"
+
+
+def test_ls_remote_treats_a_dash_leading_url_as_a_path_not_a_flag(tmp_path):
+    from trove.build import resolve_sha
+
+    marker = tmp_path / "PWNED"
+    source = Source(key="s", url=f"--upload-pack=touch {marker}", ref="HEAD")
+    with pytest.raises(RuntimeError):
+        resolve_sha(source)
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("raw", ["x/y", "./x/y", "x/y/", "./x/y/"])
+def test_curated_paths_normalize_to_one_shape(raw):
+    assert PluginSpec(name="p", source_key="s", description="d", skills=[raw]).selected_paths == ["x/y"]
+
+
+def test_curated_path_normalization_is_a_prefix_strip_not_a_charset_strip():
+    spec = PluginSpec(name="p", source_key="s", description="d", skills=[".claude/skills/x"])
+    assert spec.selected_paths == [".claude/skills/x"]
+
+
+def test_build_refuses_a_curated_path_that_matches_no_skill(tmp_path):
+    from trove.build import build_marketplace
+
+    repo = tmp_path / "repo" / "skills" / "review" / "here"
+    repo.mkdir(parents=True)
+    (repo / "SKILL.md").write_text("---\nname: here\ndescription: d\n---\nbody\n")
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\ndescription: d\nowner: {{name: o}}\n"
+        f"sources:\n  s: {{repo: o/s, local: {tmp_path / 'repo'}}}\n"
+        "plugins:\n  - name: k\n    source: s\n    description: d\n"
+        "    skills: [skills/review/here, skills/review/gone]\n"
+    )
+    with pytest.raises(ValueError, match="gone"):
+        build_marketplace(load_bundle(bundle), pin=False)
+
+
+def test_scan_raises_when_a_declared_local_path_is_missing(tmp_path):
+    with pytest.raises(ValueError, match="does not exist"):
+        scan_source(Source(key="s", repo="o/s", local=tmp_path / "nope"))
+
+
+def test_relative_local_resolves_against_the_bundle_file(tmp_path):
+    repo = tmp_path / "repos" / "s" / "skills" / "c" / "one"
+    repo.mkdir(parents=True)
+    (repo / "SKILL.md").write_text("---\nname: one\ndescription: d\n---\nbody\n")
+    conf = tmp_path / "conf"
+    conf.mkdir()
+    bundle = conf / "b.yaml"
+    bundle.write_text(
+        "name: t\nsources:\n  s: {repo: o/s, local: ../repos/s}\n"
+        "plugins:\n  - {name: p, source: s, description: d}\n"
+    )
+    loaded = load_bundle(bundle)
+    assert [s.name for s in scan_source(loaded.sources["s"])] == ["one"]
+
+
+def test_a_utf8_bom_does_not_hide_the_frontmatter(tmp_path):
+    d = tmp_path / "skills" / "c" / "bom"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        "﻿---\nname: bom\ndescription: A described skill.\n---\nbody\n", encoding="utf-8"
+    )
+    skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
+    assert skill.name == "bom"
+    assert skill.description == "A described skill."
+
+
+def test_single_quoted_yaml_escapes_are_decoded_not_passed_through(tmp_path):
+    d = tmp_path / "skills" / "c" / "q"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        "---\nname: q\ndescription: 'keeps a project''s map honest: parallel readers'\n---\nbody\n"
+    )
+    skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
+    assert skill.description == "keeps a project's map honest: parallel readers"
+
+
+def test_tolerant_parser_still_wins_when_strict_yaml_fails(tmp_path):
+    d = tmp_path / "skills" / "c" / "loose"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        "---\nname: loose\ndescription: Apply rules to prose: docs, commits.\n---\nbody\n"
+    )
+    skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
+    assert skill.description == "Apply rules to prose: docs, commits."
+    assert skill.strict_yaml is False

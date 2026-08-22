@@ -80,6 +80,10 @@ class PluginSpec:
     tags: list[str] = field(default_factory=list)
     skills: list[str] = field(default_factory=list)
 
+    @property
+    def selected_paths(self) -> list[str]:
+        return [path.removeprefix("./").strip("/") for path in self.skills]
+
 
 @dataclass
 class Bundle:
