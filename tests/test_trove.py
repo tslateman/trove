@@ -473,3 +473,51 @@ def test_serve_refuses_a_directory_with_no_catalog(tmp_path):
     from trove.cli import main
 
     assert main(["--out", str(tmp_path), "serve", "--port", "0"]) == 1
+
+
+def test_a_trailing_slash_curates_a_whole_subtree():
+    spec = PluginSpec(name="p", source_key="s", description="d", skills=["./skills/review/"])
+    assert spec.selects("skills/review/go-review")
+    assert spec.selects("skills/review/tidy")
+    assert not spec.selects("skills/craft/tidy")
+
+
+def test_no_trailing_slash_still_means_one_exact_skill():
+    spec = PluginSpec(name="p", source_key="s", description="d", skills=["skills/review/go"])
+    assert spec.selects("skills/review/go")
+    assert not spec.selects("skills/review/go-review")
+
+
+def test_subtree_curation_survives_into_the_manifest(tmp_path):
+    from trove.build import build_marketplace
+
+    for rel in ("skills/review/one", "skills/craft/two"):
+        d = tmp_path / "repo" / rel
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(f"---\nname: {Path(rel).name}\ndescription: d\n---\nbody\n")
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\ndescription: d\nowner: {{name: o}}\n"
+        f"sources:\n  s: {{repo: o/s, local: {tmp_path / 'repo'}}}\n"
+        "plugins:\n  - name: k\n    source: s\n    description: d\n"
+        "    skills: ['./skills/review/']\n"
+    )
+    manifest = build_marketplace(load_bundle(bundle), pin=False)
+    assert manifest["plugins"][0]["skills"] == ["./skills/review/"]
+
+
+def test_a_subtree_prefix_matching_nothing_still_fails(tmp_path):
+    from trove.build import build_marketplace
+
+    d = tmp_path / "repo" / "skills" / "review" / "one"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text("---\nname: one\ndescription: d\n---\nbody\n")
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\ndescription: d\nowner: {{name: o}}\n"
+        f"sources:\n  s: {{repo: o/s, local: {tmp_path / 'repo'}}}\n"
+        "plugins:\n  - name: k\n    source: s\n    description: d\n"
+        "    skills: ['./skills/nope/']\n"
+    )
+    with pytest.raises(ValueError, match="skills/nope/"):
+        build_marketplace(load_bundle(bundle), pin=False)

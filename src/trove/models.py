@@ -81,8 +81,20 @@ class PluginSpec:
     skills: list[str] = field(default_factory=list)
 
     @property
+    def selections(self) -> list[str]:
+        return [path.removeprefix("./") for path in self.skills]
+
+    @property
     def selected_paths(self) -> list[str]:
-        return [path.removeprefix("./").strip("/") for path in self.skills]
+        return [selection.rstrip("/") for selection in self.selections]
+
+    def selects(self, rel_path: str) -> bool:
+        if not self.skills:
+            return True
+        return any(
+            rel_path.startswith(selection) if selection.endswith("/") else rel_path == selection
+            for selection in self.selections
+        )
 
 
 @dataclass

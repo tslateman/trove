@@ -72,8 +72,8 @@ def plugin_entry(spec: PluginSpec, source: Source, sha: str | None) -> dict:
         entry["tags"] = spec.tags
     if resolved["homepage"]:
         entry["homepage"] = resolved["homepage"]
-    if spec.selected_paths:
-        entry["skills"] = [f"./{path}" for path in spec.selected_paths]
+    if spec.skills:
+        entry["skills"] = [f"./{selection}" for selection in spec.selections]
     return entry
 
 
@@ -111,7 +111,15 @@ def verify_curated_paths(bundle: Bundle) -> None:
             continue
         if spec.source_key not in scanned:
             scanned[spec.source_key] = {s.rel_path for s in scan_source(source)}
-        missing = [p for p in spec.selected_paths if p not in scanned[spec.source_key]]
+        found = scanned[spec.source_key]
+        missing = [
+            selection
+            for selection in spec.selections
+            if not any(
+                path.startswith(selection) if selection.endswith("/") else path == selection
+                for path in found
+            )
+        ]
         if missing:
             raise ValueError(
                 f"plugin {spec.name!r} curates paths that match no skill in "

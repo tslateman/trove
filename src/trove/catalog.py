@@ -5,12 +5,6 @@ from .resolve import effective, source_manifest
 from .scan import scan_source
 
 
-def selects(spec, skill) -> bool:
-    if not spec.skills:
-        return True
-    return skill.rel_path in spec.selected_paths
-
-
 def build_catalog(bundle: Bundle) -> dict:
     plugins_by_source: dict[str, list] = {}
     for spec in bundle.plugins:
@@ -25,7 +19,7 @@ def build_catalog(bundle: Bundle) -> dict:
     for key, source in bundle.sources.items():
         owners = plugins_by_source.get(key, [])
         for skill in scan_source(source):
-            selecting = [spec for spec in owners if selects(spec, skill)]
+            selecting = [spec for spec in owners if spec.selects(skill.rel_path)]
             if not selecting:
                 orphans.append(f"{key}:{skill.rel_path}")
                 continue

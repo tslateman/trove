@@ -82,6 +82,7 @@ plugins:
     skills: # cherry-pick — no fork needed
       - skills/review/python-review
       - skills/review/go-review
+      - skills/draw/ # a trailing slash takes the whole subtree
 
 renames:
   duet: skills # deprecate without breaking installs
