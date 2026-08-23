@@ -44,6 +44,14 @@ dist-offline: build-offline catalog
 calibrate source plugin:
     uv run trove --bundle {{ bundle }} calibrate {{ source }} {{ plugin }}
 
+# Preview what sync-local would change in the local marketplace
+sync-local-check:
+    uv run trove --bundle {{ bundle }} sync-local --dry-run
+
+# Update the local marketplace from each source plugin.json
+sync-local:
+    uv run trove --bundle {{ bundle }} sync-local
+
 # Report bundle fields that disagree with their source plugin.json
 drift:
     uv run trove --bundle {{ bundle }} drift

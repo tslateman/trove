@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .build import build_marketplace, dumps
 from .catalog import build_catalog
+from . import local
 from .loader import load_bundle
 from .resolve import drift, source_manifest
 from .scan import scan_source
@@ -82,6 +83,45 @@ def cmd_drift(args: argparse.Namespace) -> int:
         print(f"\n{found} field(s) restate the source and disagree with it")
         return 1
     print("no drift: every restated field matches its source plugin.json")
+    return 0
+
+
+def cmd_sync_local(args: argparse.Namespace) -> int:
+    if not args.marketplace.exists():
+        raise RuntimeError(f"no local marketplace at {args.marketplace}")
+
+    bundle = load_bundle(args.bundle)
+    manifest = json.loads(args.marketplace.read_text(encoding="utf-8"))
+    changes, absent, unsourced = local.plan(bundle, manifest)
+
+    for name in unsourced:
+        print(
+            f"{name}: skipped — source has no local checkout, so no plugin.json to sync from",
+            file=sys.stderr,
+        )
+    for name in absent:
+        print(f"{name}: not in the local marketplace — add it with `claude plugin install`", file=sys.stderr)
+
+    if not changes:
+        print(f"{args.marketplace.name}: already matches every source plugin.json")
+        return 0
+
+    for name, field, old, new in changes:
+        print(f"{name}.{field}")
+        print(f"  was: {old}")
+        print(f"  now: {new}")
+
+    if args.dry_run:
+        print(f"\n{len(changes)} change(s) — rerun without --dry-run to write them")
+        return 0
+
+    backup = args.marketplace.with_suffix(".json.bak")
+    backup.write_text(args.marketplace.read_text(encoding="utf-8"), encoding="utf-8")
+    updated = local.apply(manifest, changes)
+    temp = args.marketplace.with_suffix(".json.tmp")
+    temp.write_text(json.dumps(updated, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    temp.replace(args.marketplace)
+    print(f"\nwrote {len(changes)} change(s) to {args.marketplace} (backup at {backup.name})")
     return 0
 
 
@@ -165,6 +205,11 @@ def main(argv: list[str] | None = None) -> int:
 
     catalog = sub.add_parser("catalog", help="emit catalog.json and the static site")
     catalog.set_defaults(func=cmd_catalog)
+
+    sync = sub.add_parser("sync-local", help="update the local marketplace from each source plugin.json")
+    sync.add_argument("--marketplace", type=Path, default=local.DEFAULT_MARKETPLACE)
+    sync.add_argument("--dry-run", action="store_true")
+    sync.set_defaults(func=cmd_sync_local)
 
     drift_cmd = sub.add_parser("drift", help="report bundle fields that disagree with the source plugin.json")
     drift_cmd.set_defaults(func=cmd_drift)

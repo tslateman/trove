@@ -42,6 +42,8 @@ just serve         # browse at http://127.0.0.1:8787
 just dist          # build and catalog together, ready to publish
 
 just drift         # bundle fields that disagree with their source plugin.json
+just sync-local-check  # preview local-marketplace updates
+just sync-local        # apply them
 just orphans       # skills no plugin ships
 just lint-skills   # skills whose frontmatter fails a strict YAML parse
 just calibrate skills skills@local   # check estimates against Claude Code
@@ -112,6 +114,18 @@ a `marketplace.json` a teammate consumes in two commands:
 claude plugin marketplace add <your-registry>
 claude plugin install review-kit@tslateman
 ```
+
+## Editing a plugin's description
+
+Edit `.claude-plugin/plugin.json` in the repo that owns the plugin — nowhere
+else. `trove build` and `trove catalog` read it, so a description or version
+change reaches the registry with no bundle edit.
+
+Claude Code's local marketplace keeps its own copy, which drifts silently.
+`trove sync-local` rewrites the entries your bundle names and leaves every
+other entry byte-identical. It previews with `--dry-run`, writes a `.bak`
+first, and refuses to touch a plugin whose source has no local checkout, since
+there is no `plugin.json` to sync from and the bundle value would be a guess.
 
 ## Token estimates
 

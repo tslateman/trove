@@ -521,3 +521,119 @@ def test_a_subtree_prefix_matching_nothing_still_fails(tmp_path):
     )
     with pytest.raises(ValueError, match="skills/nope/"):
         build_marketplace(load_bundle(bundle), pin=False)
+
+
+def _local_bundle(tmp_path: Path, *, checkout: bool, override: str = "") -> Path:
+    repo = tmp_path / "repo"
+    if checkout:
+        (repo / ".claude-plugin").mkdir(parents=True)
+        (repo / ".claude-plugin" / "plugin.json").write_text(
+            json.dumps({"name": "p", "version": "2.0.0", "description": "upstream text"})
+        )
+    bundle = tmp_path / "b.yaml"
+    local_line = f"local: {repo}, " if checkout else ""
+    bundle.write_text(
+        f"name: t\ndescription: d\nowner: {{name: o}}\n"
+        f"sources:\n  s: {{repo: o/s, {local_line}ref: main}}\n"
+        f"plugins:\n  - {{name: p, source: s{override}}}\n"
+    )
+    return bundle
+
+
+def _marketplace(tmp_path: Path) -> dict:
+    return {
+        "name": "local",
+        "plugins": [
+            {"name": "p", "description": "stale", "version": "0.0.1", "source": "./plugins/p"},
+            {"name": "untouched", "description": "keep me", "version": "9.9.9", "source": "./plugins/untouched"},
+        ],
+    }
+
+
+def test_sync_local_proposes_the_upstream_values(tmp_path):
+    from trove.local import plan
+
+    changes, absent, unsourced = plan(load_bundle(_local_bundle(tmp_path, checkout=True)), _marketplace(tmp_path))
+    assert sorted((n, f, new) for n, f, _, new in changes) == [
+        ("p", "description", "upstream text"),
+        ("p", "version", "2.0.0"),
+    ]
+    assert unsourced == []
+
+
+def test_sync_local_syncs_a_deliberate_bundle_override(tmp_path):
+    from trove.local import plan
+
+    bundle = _local_bundle(tmp_path, checkout=True, override=", description: a curated subset")
+    changes, _, _ = plan(load_bundle(bundle), _marketplace(tmp_path))
+    assert ("p", "description", "stale", "a curated subset") in changes
+
+
+def test_sync_local_refuses_to_sync_a_source_with_no_checkout(tmp_path):
+    from trove.local import plan
+
+    changes, _, unsourced = plan(load_bundle(_local_bundle(tmp_path, checkout=False)), _marketplace(tmp_path))
+    assert changes == []
+    assert unsourced == ["p"]
+
+
+def test_sync_local_reports_a_plugin_the_marketplace_does_not_list(tmp_path):
+    from trove.local import plan
+
+    manifest = {"name": "local", "plugins": []}
+    _, absent, _ = plan(load_bundle(_local_bundle(tmp_path, checkout=True)), manifest)
+    assert absent == ["p"]
+
+
+def test_sync_local_leaves_unrelated_entries_alone(tmp_path):
+    from trove.local import apply, plan
+
+    manifest = _marketplace(tmp_path)
+    changes, _, _ = plan(load_bundle(_local_bundle(tmp_path, checkout=True)), manifest)
+    updated = apply(manifest, changes)
+    other = next(e for e in updated["plugins"] if e["name"] == "untouched")
+    assert other == {
+        "name": "untouched",
+        "description": "keep me",
+        "version": "9.9.9",
+        "source": "./plugins/untouched",
+    }
+    synced = next(e for e in updated["plugins"] if e["name"] == "p")
+    assert synced["source"] == "./plugins/p"
+
+
+def test_sync_local_dry_run_writes_nothing(tmp_path):
+    from trove.cli import main
+
+    target = tmp_path / "marketplace.json"
+    original = json.dumps(_marketplace(tmp_path), indent=2)
+    target.write_text(original)
+    code = main([
+        "--bundle", str(_local_bundle(tmp_path, checkout=True)),
+        "sync-local", "--marketplace", str(target), "--dry-run",
+    ])
+    assert code == 0
+    assert target.read_text() == original
+
+
+def test_sync_local_writes_a_backup_before_changing_anything(tmp_path):
+    from trove.cli import main
+
+    target = tmp_path / "marketplace.json"
+    original = json.dumps(_marketplace(tmp_path), indent=2)
+    target.write_text(original)
+    assert main([
+        "--bundle", str(_local_bundle(tmp_path, checkout=True)),
+        "sync-local", "--marketplace", str(target),
+    ]) == 0
+    assert json.loads(target.read_text())["plugins"][0]["version"] == "2.0.0"
+    assert target.with_suffix(".json.bak").read_text() == original
+
+
+def test_sync_local_fails_when_the_marketplace_is_missing(tmp_path):
+    from trove.cli import main
+
+    assert main([
+        "--bundle", str(_local_bundle(tmp_path, checkout=True)),
+        "sync-local", "--marketplace", str(tmp_path / "nope.json"),
+    ]) == 1
