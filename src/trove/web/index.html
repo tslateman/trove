@@ -91,11 +91,14 @@ aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh -
 .card h4 { margin: 0; font: 600 15px/1.3 var(--mono); letter-spacing: -.01em; padding-right: 28px; }
 .card p { margin: 0; font-size: 13.2px; color: var(--muted); line-height: 1.5;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.card p.clipped { cursor: zoom-in; }
+.card p.open { -webkit-line-clamp: unset; cursor: zoom-out; }
 .card .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; align-items: center; }
 .pill { font: 11px/1 var(--mono); padding: 4px 7px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
 .pill.cat { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
 .pill.tok { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
 .pill.inv { background: transparent; }
+.pill.ver { font-weight: 600; color: var(--ink); }
 .pill.lint { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
 .pick {
   position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 6px;
@@ -259,13 +262,23 @@ function render() {
          <span class="pill inv">${(r.tokensOnInvoke / 1000).toFixed(1)}k on invoke</span>
          ${r.strictYaml ? "" : '<span class="pill lint">yaml</span>'}`
       : `<span class="pill cat">${escapeHtml(r.category || "—")}</span>
+         ${r.version ? `<span class="pill ver">v${escapeHtml(r.version)}</span>` : ""}
+         ${r.skills != null ? `<span class="pill">${r.skills} skill${r.skills === 1 ? "" : "s"}</span>` : ""}
          ${r.curated ? '<span class="pill tok">curated</span>' : ""}
          ${(r.tags || []).slice(0, 3).map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("")}`;
     card.innerHTML = `
       ${state.view === "skills" ? '<button class="pick">✓</button>' : ""}
       <h4>${escapeHtml(r.name)}</h4>
-      <p>${escapeHtml(r.description || "")}</p>
+      <p title="${escapeHtml(r.description || "")}">${escapeHtml(r.description || "")}</p>
       <div class="meta">${meta}</div>`;
+    const body = card.querySelector("p");
+    requestAnimationFrame(() => {
+      if (body.scrollHeight > body.clientHeight + 1) body.classList.add("clipped");
+    });
+    body.onclick = () => {
+      body.classList.toggle("open");
+      body.classList.toggle("clipped");
+    };
     if (state.view === "skills") {
       card.querySelector(".pick").onclick = () => {
         state.picked.has(r.name) ? state.picked.delete(r.name) : state.picked.add(r.name);
