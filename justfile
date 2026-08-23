@@ -62,6 +62,10 @@ lint-skills: catalog
 serve: catalog
     uv run trove --out {{ out }} serve --port {{ port }}
 
+# Stop every trove preview server this project started
+stop:
+    @pkill -f 'trove --out' && echo "stopped" || echo "none running"
+
 # Open the served catalog in a browser
 open:
     open http://127.0.0.1:{{ port }}/
@@ -76,20 +80,34 @@ test:
 verify: catalog
     #!/usr/bin/env bash
     set -euo pipefail
+    if lsof -nP -iTCP:{{ port }} -sTCP:LISTEN >/dev/null 2>&1; then
+      echo "port {{ port }} is already serving — run 'just stop', or pass --set port NNNN" >&2
+      exit 1
+    fi
     uv run trove --out {{ out }} serve --port {{ port }} >/dev/null 2>&1 &
     server=$!
     trap 'kill $server 2>/dev/null || true' EXIT
-    until curl -sf -o /dev/null http://127.0.0.1:{{ port }}/catalog.json; do sleep 0.2; done
+    until curl -sf -o /dev/null http://127.0.0.1:{{ port }}/catalog.json; do
+      kill -0 $server 2>/dev/null || { echo "preview server exited before answering" >&2; exit 1; }
+      sleep 0.2
+    done
     uv run --with playwright python scripts/verify_ui.py --port {{ port }} --out {{ out }}
 
 # Capture catalog screenshots in both themes
 shots dir="shots": catalog
     #!/usr/bin/env bash
     set -euo pipefail
+    if lsof -nP -iTCP:{{ port }} -sTCP:LISTEN >/dev/null 2>&1; then
+      echo "port {{ port }} is already serving — run 'just stop', or pass --set port NNNN" >&2
+      exit 1
+    fi
     uv run trove --out {{ out }} serve --port {{ port }} >/dev/null 2>&1 &
     server=$!
     trap 'kill $server 2>/dev/null || true' EXIT
-    until curl -sf -o /dev/null http://127.0.0.1:{{ port }}/catalog.json; do sleep 0.2; done
+    until curl -sf -o /dev/null http://127.0.0.1:{{ port }}/catalog.json; do
+      kill -0 $server 2>/dev/null || { echo "preview server exited before answering" >&2; exit 1; }
+      sleep 0.2
+    done
     uv run --with playwright python scripts/verify_ui.py --port {{ port }} --out {{ out }} --shots {{ dir }}
     echo "wrote {{ dir }}/catalog-light.png and {{ dir }}/catalog-dark.png"
 

@@ -52,6 +52,18 @@ def check(page, url: str, expected_skills: int, shots: Path | None, theme: str) 
     cards = page.locator(".card").count()
     if cards != expected_skills:
         problems.append(f"[{theme}] rendered {cards} cards, catalog has {expected_skills}")
+
+    served = page.evaluate("() => state.data.skills.map(s => [s.name, s.description])")
+    rendered = page.evaluate(
+        "() => [...document.querySelectorAll('.card')].map("
+        "c => [c.querySelector('h4').textContent, c.querySelector('p').textContent])"
+    )
+    if served[: len(rendered)] != rendered:
+        first = next((i for i, (a, b) in enumerate(zip(served, rendered)) if a != b), 0)
+        problems.append(
+            f"[{theme}] card {first} renders {rendered[first]!r} but the catalog says "
+            f"{served[first]!r} — the page is stale or mis-binding"
+        )
     if page.locator("#f-cat button").count() == 0:
         problems.append(f"[{theme}] no category facets rendered")
     page.locator(".card .pick").first.click()

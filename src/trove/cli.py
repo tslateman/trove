@@ -121,10 +121,30 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
     return 0
 
 
+class PreviewHandler(SimpleHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
+    def send_head(self):
+        del self.headers["If-Modified-Since"]
+        return super().send_head()
+
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        super().end_headers()
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
-    handler = partial(SimpleHTTPRequestHandler, directory=str(args.out))
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
-    print(f"serving {args.out} at http://127.0.0.1:{args.port}")
+    if not (args.out / "index.html").exists():
+        raise RuntimeError(f"{args.out} has no index.html — run `trove catalog` first")
+    handler = partial(PreviewHandler, directory=str(args.out))
+    try:
+        server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
+    except OSError as exc:
+        raise RuntimeError(
+            f"cannot bind 127.0.0.1:{args.port} ({exc.strerror}) — another server is already "
+            "there; stop it or choose another port"
+        ) from exc
+    print(f"serving {args.out.resolve()} at http://127.0.0.1:{args.port}")
     server.serve_forever()
     return 0
 

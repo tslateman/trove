@@ -411,3 +411,65 @@ def test_build_refuses_a_plugin_with_no_description_anywhere(tmp_path):
 
     with pytest.raises(ValueError, match="no description"):
         plugin_entry(PluginSpec(name="p", source_key="s"), Source(key="s", repo="o/s"), sha=None)
+
+
+def _serve(directory: Path):
+    from functools import partial
+    from http.server import ThreadingHTTPServer
+    import threading
+    from trove.cli import PreviewHandler
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), partial(PreviewHandler, directory=str(directory)))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def test_preview_server_forbids_browser_caching(tmp_path):
+    from urllib.request import urlopen
+
+    (tmp_path / "index.html").write_text("<p>one</p>")
+    server = _serve(tmp_path)
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}/index.html"
+        with urlopen(url) as first:
+            assert "no-store" in first.headers["Cache-Control"]
+
+        (tmp_path / "index.html").write_text("<p>two</p>")
+        with urlopen(url) as second:
+            assert second.read() == b"<p>two</p>"
+    finally:
+        server.shutdown()
+
+
+def test_preview_server_ignores_a_conditional_request(tmp_path):
+    from urllib.request import Request, urlopen
+
+    (tmp_path / "index.html").write_text("<p>one</p>")
+    server = _serve(tmp_path)
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}/index.html"
+        request = Request(url, headers={"If-Modified-Since": "Mon, 01 Jan 2035 00:00:00 GMT"})
+        with urlopen(request) as response:
+            assert response.status == 200
+            assert response.read() == b"<p>one</p>"
+    finally:
+        server.shutdown()
+
+
+def test_serve_refuses_a_port_that_is_already_serving(tmp_path):
+    from trove.cli import main
+
+    (tmp_path / "index.html").write_text("<p>one</p>")
+    server = _serve(tmp_path)
+    try:
+        port = server.server_address[1]
+        code = main(["--out", str(tmp_path), "serve", "--port", str(port)])
+        assert code == 1
+    finally:
+        server.shutdown()
+
+
+def test_serve_refuses_a_directory_with_no_catalog(tmp_path):
+    from trove.cli import main
+
+    assert main(["--out", str(tmp_path), "serve", "--port", "0"]) == 1
