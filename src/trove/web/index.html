@@ -92,6 +92,7 @@ aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh -
 .card p { margin: 0; font-size: 13.2px; color: var(--muted); line-height: 1.5;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .card p.clipped { cursor: zoom-in; }
+.card p.full { -webkit-line-clamp: unset; cursor: auto; }
 .card p.open { -webkit-line-clamp: unset; cursor: zoom-out; }
 .card .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; align-items: center; }
 .pill { font: 11px/1 var(--mono); padding: 4px 7px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
@@ -269,16 +270,18 @@ function render() {
     card.innerHTML = `
       ${state.view === "skills" ? '<button class="pick">✓</button>' : ""}
       <h4>${escapeHtml(r.name)}</h4>
-      <p title="${escapeHtml(r.description || "")}">${escapeHtml(r.description || "")}</p>
+      <p class="${state.view === "skills" ? "" : "full"}" title="${escapeHtml(r.description || "")}">${escapeHtml(r.description || "")}</p>
       <div class="meta">${meta}</div>`;
     const body = card.querySelector("p");
-    requestAnimationFrame(() => {
-      if (body.scrollHeight > body.clientHeight + 1) body.classList.add("clipped");
-    });
-    body.onclick = () => {
-      body.classList.toggle("open");
-      body.classList.toggle("clipped");
-    };
+    if (state.view === "skills") {
+      requestAnimationFrame(() => {
+        if (body.scrollHeight > body.clientHeight + 1) body.classList.add("clipped");
+      });
+      body.onclick = () => {
+        body.classList.toggle("open");
+        body.classList.toggle("clipped");
+      };
+    }
     if (state.view === "skills") {
       card.querySelector(".pick").onclick = () => {
         state.picked.has(r.name) ? state.picked.delete(r.name) : state.picked.add(r.name);
