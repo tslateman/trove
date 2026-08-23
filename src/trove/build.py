@@ -5,6 +5,7 @@ import os
 import subprocess
 
 from .models import Bundle, PluginSpec, Source
+from .resolve import effective, source_manifest
 
 SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
 
@@ -50,21 +51,27 @@ def resolve_sha(source: Source) -> str:
 
 
 def plugin_entry(spec: PluginSpec, source: Source, sha: str | None) -> dict:
+    resolved = effective(spec, source_manifest(source))
+    if not resolved["description"]:
+        raise ValueError(
+            f"plugin {spec.name!r} has no description: source {spec.source_key!r} has no local "
+            "checkout to inherit one from, so the bundle must declare it"
+        )
     entry: dict = {
         "name": spec.name,
-        "description": spec.description,
+        "description": resolved["description"],
         "source": source.marketplace_source(sha),
     }
-    if spec.display_name:
-        entry["displayName"] = spec.display_name
-    if spec.version:
-        entry["version"] = spec.version
+    if resolved["display_name"]:
+        entry["displayName"] = resolved["display_name"]
+    if resolved["version"]:
+        entry["version"] = resolved["version"]
     if spec.category:
         entry["category"] = spec.category
     if spec.tags:
         entry["tags"] = spec.tags
-    if spec.homepage:
-        entry["homepage"] = spec.homepage
+    if resolved["homepage"]:
+        entry["homepage"] = resolved["homepage"]
     if spec.selected_paths:
         entry["skills"] = [f"./{path}" for path in spec.selected_paths]
     return entry

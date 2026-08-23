@@ -13,6 +13,7 @@ from pathlib import Path
 from .build import build_marketplace, dumps
 from .catalog import build_catalog
 from .loader import load_bundle
+from .resolve import drift, source_manifest
 from .scan import scan_source
 
 DEFAULT_BUNDLE = Path("bundles/tslateman.yaml")
@@ -61,6 +62,26 @@ def cmd_catalog(args: argparse.Namespace) -> int:
         f"wrote {target}: {catalog['totals']['skills']} skills, "
         f"~{catalog['totals']['alwaysOn']:,} tok always-on"
     )
+    return 0
+
+
+def cmd_drift(args: argparse.Namespace) -> int:
+    bundle = load_bundle(args.bundle)
+    found = 0
+    for spec in bundle.plugins:
+        manifest = source_manifest(bundle.sources[spec.source_key])
+        if not manifest:
+            print(f"{spec.name}: no local checkout to compare against", file=sys.stderr)
+            continue
+        for field, declared, upstream in drift(spec, manifest):
+            found += 1
+            print(f"{spec.name}.{field}")
+            print(f"  bundle: {declared}")
+            print(f"  source: {upstream}")
+    if found:
+        print(f"\n{found} field(s) restate the source and disagree with it")
+        return 1
+    print("no drift: every restated field matches its source plugin.json")
     return 0
 
 
@@ -124,6 +145,9 @@ def main(argv: list[str] | None = None) -> int:
 
     catalog = sub.add_parser("catalog", help="emit catalog.json and the static site")
     catalog.set_defaults(func=cmd_catalog)
+
+    drift_cmd = sub.add_parser("drift", help="report bundle fields that disagree with the source plugin.json")
+    drift_cmd.set_defaults(func=cmd_drift)
 
     calibrate = sub.add_parser("calibrate", help="compare estimates against claude plugin details")
     calibrate.add_argument("source")

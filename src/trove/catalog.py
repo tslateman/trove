@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .models import Bundle
+from .resolve import effective, source_manifest
 from .scan import scan_source
 
 
@@ -15,6 +16,10 @@ def build_catalog(bundle: Bundle) -> dict:
     for spec in bundle.plugins:
         plugins_by_source.setdefault(spec.source_key, []).append(spec)
 
+    resolved = {
+        spec.name: effective(spec, source_manifest(bundle.sources[spec.source_key]))
+        for spec in bundle.plugins
+    }
     records = []
     orphans = []
     for key, source in bundle.sources.items():
@@ -30,7 +35,7 @@ def build_catalog(bundle: Bundle) -> dict:
                 {tag for spec in selecting if spec.skills for tag in spec.tags}
             )
             record["homepage"] = next(
-                (spec.homepage for spec in selecting if spec.homepage), None
+                (h for h in (resolved[spec.name]["homepage"] for spec in selecting) if h), None
             )
             records.append(record)
 
@@ -42,10 +47,11 @@ def build_catalog(bundle: Bundle) -> dict:
         "plugins": [
             {
                 "name": spec.name,
-                "description": spec.description,
+                "description": resolved[spec.name]["description"],
+                "version": resolved[spec.name]["version"],
                 "category": spec.category,
                 "tags": spec.tags,
-                "homepage": spec.homepage,
+                "homepage": resolved[spec.name]["homepage"],
                 "source": spec.source_key,
                 "curated": bool(spec.skills),
                 "skills": sum(1 for r in records if spec.name in r["plugins"]),

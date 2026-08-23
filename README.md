@@ -41,6 +41,7 @@ just catalog       # catalog.json + the static site
 just serve         # browse at http://127.0.0.1:8787
 just dist          # build and catalog together, ready to publish
 
+just drift         # bundle fields that disagree with their source plugin.json
 just orphans       # skills no plugin ships
 just lint-skills   # skills whose frontmatter fails a strict YAML parse
 just calibrate skills skills@local   # check estimates against Claude Code
@@ -67,9 +68,16 @@ sources:
     local: ~/dev/skills # optional, enables scanning before a remote exists
 
 plugins:
+  # description, version, homepage and displayName are inherited from the
+  # source's .claude-plugin/plugin.json when the bundle omits them.
+  - name: skills
+    source: skills
+    category: development
+    tags: [review, craft]
+
   - name: review-kit
     source: skills
-    description: Language review skills only
+    description: Language review skills only # a curated subset earns its own
     tags: [review, linting]
     skills: # cherry-pick — no fork needed
       - skills/review/python-review
@@ -83,6 +91,14 @@ renames:
 to. A relative `local` resolves against the bundle file, not the working
 directory. It is optional: a source with only a remote builds fine but reports
 no skills in the catalog.
+
+A plugin inherits `description`, `version`, `homepage`, and `displayName` from
+its source's `plugin.json`, so the repo that owns a plugin owns its metadata and
+a version bump reaches the registry by itself. Declare a field in the bundle
+only to override it deliberately — a curated subset needs its own description.
+`trove drift` reports any restated field that disagrees with its source, and
+`just check` runs it. A source with no local checkout cannot inherit, so the
+bundle must declare a description for it or the build fails.
 
 `ref` accepts a tag or a branch. Build resolves it to a commit sha, preferring
 an annotated tag's target over the tag object, and refuses to guess when a tag

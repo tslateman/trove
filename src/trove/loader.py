@@ -38,7 +38,7 @@ def load_bundle(path: Path) -> Bundle:
             PluginSpec(
                 name=spec["name"],
                 source_key=source_key,
-                description=spec["description"],
+                description=spec.get("description"),
                 category=spec.get("category"),
                 display_name=spec.get("displayName"),
                 version=spec.get("version"),

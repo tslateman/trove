@@ -44,6 +44,10 @@ dist-offline: build-offline catalog
 calibrate source plugin:
     uv run trove --bundle {{ bundle }} calibrate {{ source }} {{ plugin }}
 
+# Report bundle fields that disagree with their source plugin.json
+drift:
+    uv run trove --bundle {{ bundle }} drift
+
 # Report skills that no plugin ships
 orphans: catalog
     @jq -r '.orphans[]' {{ out }}/catalog.json | grep . || echo "none"
@@ -98,7 +102,7 @@ fmt-check:
     prettier --check '*.md'
 
 # Everything CI should run
-check: fmt-check test verify
+check: fmt-check test drift verify
 
 # --- Housekeeping ---
 

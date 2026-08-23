@@ -218,6 +218,7 @@ def test_cli_reports_config_errors_without_a_traceback(tmp_path, capsys):
 
 # --- fixes from the pre-publish review ---
 
+import json
 import subprocess
 
 
@@ -357,3 +358,56 @@ def test_tolerant_parser_still_wins_when_strict_yaml_fails(tmp_path):
     skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
     assert skill.description == "Apply rules to prose: docs, commits."
     assert skill.strict_yaml is False
+
+
+def _source_with_manifest(tmp_path: Path, **manifest) -> Source:
+    root = tmp_path / "repo"
+    (root / ".claude-plugin").mkdir(parents=True)
+    (root / ".claude-plugin" / "plugin.json").write_text(json.dumps(manifest))
+    return Source(key="s", repo="o/s", local=root)
+
+
+def test_plugin_metadata_is_inherited_from_the_source_manifest(tmp_path):
+    from trove.build import plugin_entry
+
+    source = _source_with_manifest(
+        tmp_path, name="s", version="0.6.0", description="upstream text"
+    )
+    entry = plugin_entry(PluginSpec(name="s", source_key="s"), source, sha=None)
+    assert entry["version"] == "0.6.0"
+    assert entry["description"] == "upstream text"
+
+
+def test_a_bundle_value_overrides_the_source_manifest(tmp_path):
+    from trove.build import plugin_entry
+
+    source = _source_with_manifest(tmp_path, version="0.6.0", description="upstream text")
+    spec = PluginSpec(name="kit", source_key="s", description="a curated subset")
+    entry = plugin_entry(spec, source, sha=None)
+    assert entry["description"] == "a curated subset"
+    assert entry["version"] == "0.6.0"
+
+
+def test_drift_reports_a_restated_field_that_disagrees(tmp_path):
+    from trove.resolve import drift, source_manifest
+
+    manifest = source_manifest(_source_with_manifest(tmp_path, version="0.6.0", description="up"))
+    spec = PluginSpec(name="s", source_key="s", description="down", version="0.5.0")
+    assert sorted(f for f, _, _ in drift(spec, manifest)) == ["description", "version"]
+
+
+def test_drift_exempts_a_curated_plugins_own_description(tmp_path):
+    from trove.resolve import drift, source_manifest
+
+    manifest = source_manifest(_source_with_manifest(tmp_path, version="0.6.0", description="up"))
+    spec = PluginSpec(
+        name="kit", source_key="s", description="a curated subset", skills=["skills/a/b"]
+    )
+    assert [f for f, _, _ in drift(spec, manifest)] == []
+
+
+def test_build_refuses_a_plugin_with_no_description_anywhere(tmp_path):
+    from trove.build import plugin_entry
+
+    with pytest.raises(ValueError, match="no description"):
+        plugin_entry(PluginSpec(name="p", source_key="s"), Source(key="s", repo="o/s"), sha=None)

@@ -72,7 +72,7 @@ class Skill:
 class PluginSpec:
     name: str
     source_key: str
-    description: str
+    description: str | None = None
     category: str | None = None
     display_name: str | None = None
     version: str | None = None
