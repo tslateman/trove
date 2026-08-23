@@ -177,6 +177,8 @@ UI so the registry can nudge without breaking.
 - The stack picker keys selections by skill name, so two sources shipping the
   same skill name collapse into one entry.
 
+Planned work on all four lives in [ROADMAP.md](ROADMAP.md).
+
 ## Development
 
 ```bash
