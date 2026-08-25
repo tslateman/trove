@@ -147,7 +147,24 @@ description: "Apply Strunk's rules to prose: docs, commits, UI text."
 List every flagged skill:
 
 ```bash
-just lint-skills
+just lint
+```
+
+### A skill is flagged `trigger`
+
+Its description says what the skill does and never says when to reach for it.
+Claude Code chooses from the description alone, so a skill without a trigger
+clause is one it will not fire.
+
+```yaml
+description: Reflect on recent work and surface what comes next
+```
+
+Add the case that should invoke it:
+
+```yaml
+description: Reflect on recent work and surface what comes next.
+  Use when the user asks for a retro or a debrief.
 ```
 
 ### Two sources ship the same skill name

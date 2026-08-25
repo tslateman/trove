@@ -989,3 +989,120 @@ def test_a_source_the_catalog_cannot_reach_costs_a_pin_not_the_run(tmp_path):
     assert [s["name"] for s in catalog["skills"]] == ["tidy"]
     assert catalog["sources"]["s"]["body"] == "body/s/"
     assert any("cannot reach" in note for note in workspace.notes)
+
+
+# --- what discovery cannot use ---
+
+
+def _lint(name="a-skill", description="Does a thing. Use when asked.", strict=True):
+    from trove.lint import findings
+
+    return findings(name, description, strict)
+
+
+def test_a_skill_that_names_itself_and_says_when_it_fires_is_clean():
+    assert _lint() == []
+
+
+def test_a_description_that_never_says_when_is_flagged():
+    assert _lint(description="Reflect on recent work and surface what comes next") == [
+        "trigger"
+    ]
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        "Does a thing. Use when asked.",
+        "Does a thing. Use whenever the user asks.",
+        "Post-op check after agent work.",
+        "Trigger on rewriting a draft.",
+        "Do NOT use for code review.",
+        "Invoke on /brevity.",
+    ],
+)
+def test_a_trigger_clause_clears_the_rule(description):
+    assert "trigger" not in _lint(description=description)
+
+
+def test_an_empty_description_is_reported_once_not_twice():
+    assert _lint(description="") == ["description"]
+
+
+@pytest.mark.parametrize(
+    "name", ["Bad_Name", "-leading", "trailing-", "double--hyphen", "Upper", "a" * 65]
+)
+def test_a_name_the_spec_refuses_is_flagged(name):
+    assert "name" in _lint(name=name)
+
+
+@pytest.mark.parametrize("name", ["a", "code-review", "tdd-2", "x-y-z"])
+def test_a_kebab_case_name_within_the_cap_is_clean(name):
+    assert "name" not in _lint(name=name)
+
+
+def test_a_description_past_the_listing_cap_is_flagged():
+    from trove.lint import LISTING_MAX
+
+    long = "Use when it is long. " + "x" * LISTING_MAX
+    assert "listing" in _lint(description=long)
+    assert "listing" not in _lint(description="Use when short.")
+
+
+def test_a_frontmatter_that_fails_a_strict_parse_is_flagged():
+    assert _lint(strict=False) == ["yaml"]
+
+
+def test_findings_are_carried_on_the_skill_and_into_the_catalog(tmp_path):
+    from trove.catalog import build_catalog
+
+    d = tmp_path / "repo" / "skills" / "craft" / "Bad_Name"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text("---\nname: Bad_Name\ndescription: Does a thing.\n---\nbody\n")
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\nsources:\n  s: {{repo: o/s, local: {tmp_path / 'repo'}}}\n"
+        "plugins:\n  - {name: p, source: s, description: d}\n"
+    )
+    record = build_catalog(load_bundle(bundle))["skills"][0]
+    assert record["lint"] == ["trigger", "name"]
+
+
+def test_every_finding_code_carries_a_line_explaining_it():
+    from trove.lint import FINDINGS
+
+    codes = set(_lint(name="Bad_Name", description="", strict=False))
+    codes |= {"trigger", "listing"}
+    assert codes <= set(FINDINGS)
+
+
+def test_lint_exits_nonzero_when_a_skill_is_flagged(tmp_path, capsys):
+    from trove.cli import main
+
+    d = tmp_path / "repo" / "skills" / "craft" / "tidy"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text("---\nname: tidy\ndescription: Tidies.\n---\nbody\n")
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\nsources:\n  s: {{repo: o/s, local: {tmp_path / 'repo'}}}\n"
+        "plugins:\n  - {name: p, source: s, description: d}\n"
+    )
+    assert main(["--bundle", str(bundle), "--offline", "lint"]) == 1
+    out = capsys.readouterr().out
+    assert "trigger" in out and "1 skill(s) flagged" in out
+
+
+def test_lint_exits_zero_when_nothing_is_flagged(tmp_path):
+    from trove.cli import main
+
+    d = tmp_path / "repo" / "skills" / "craft" / "tidy"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        "---\nname: tidy\ndescription: Tidies up. Use when asked to tidy.\n---\nbody\n"
+    )
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\nsources:\n  s: {{repo: o/s, local: {tmp_path / 'repo'}}}\n"
+        "plugins:\n  - {name: p, source: s, description: d}\n"
+    )
+    assert main(["--bundle", str(bundle), "--offline", "lint"]) == 0

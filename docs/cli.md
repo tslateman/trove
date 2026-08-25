@@ -77,8 +77,7 @@ wrote out/catalog.json: 56 skills, ~7,329 tok always-on
 `catalog.json` carries every skill with its token costs, category, tags, owning
 plugins, and lint state, plus the orphans no plugin ships.
 
-Recipes: `just catalog`, `just catalog-offline`, `just dist`, `just orphans`,
-`just lint-skills`.
+Recipes: `just catalog`, `just catalog-offline`, `just dist`, `just orphans`.
 
 ## serve
 
@@ -103,6 +102,29 @@ curl http://127.0.0.1:8787/body/drafts/skills/craft/tidy/SKILL.md
 ```
 
 Recipes: `just serve`, `just open`, `just stop`.
+
+## lint
+
+Report skills that discovery cannot use.
+
+```bash
+trove lint
+```
+
+```
+skills/skills/writing/prose
+  yaml: frontmatter fails a strict YAML parse
+  trigger: the description never says when to use the skill
+
+1 skill(s) flagged
+```
+
+Exits 1 when anything is flagged, so it gates in CI. It is not part of
+`just check`, since a finding is about a skill in someone else's repo rather
+than about this build. The rules are listed in the
+[README](../README.md#what-the-linter-checks).
+
+Recipe: `just lint`.
 
 ## drift
 

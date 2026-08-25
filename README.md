@@ -54,11 +54,11 @@ just dist          # build and catalog together, ready to publish
 just cache         # what the fetched-source cache holds
 just cache-clear   # empty it
 
+just lint          # skills discovery cannot use
 just drift         # bundle fields that disagree with their source plugin.json
 just sync-local-check  # preview local-marketplace updates
 just sync-local        # apply them
 just orphans       # skills no plugin ships
-just lint-skills   # skills whose frontmatter fails a strict YAML parse
 just calibrate skills skills@local   # check estimates against Claude Code
 ```
 
@@ -238,6 +238,30 @@ body once chosen, one file when the body names it.
 Two shapes fail the build instead of shipping quietly: a `local` path that is
 declared but missing, and a `skills:` entry that matches no scanned skill. Both
 otherwise produce a manifest pointing at nothing.
+
+## What the linter checks
+
+Claude Code picks a skill from its name and description alone, so `trove lint`
+checks what discovery reads. Every rule is mechanical, and each names something
+that stops a skill from being chosen or from being read as written.
+
+| Finding       | What it means                                                           |
+| ------------- | ----------------------------------------------------------------------- |
+| `yaml`        | The frontmatter fails a strict YAML parse                               |
+| `description` | No description, so nothing can choose this skill                        |
+| `trigger`     | The description never says when to use the skill                        |
+| `name`        | The name is not kebab-case within 64 characters                         |
+| `listing`     | The description passes 1,536 characters, where Claude Code truncates it |
+
+Each finding rides on the skill in `catalog.json` as `lint`, so the catalog
+filters and flags them too. `trove lint` exits 1 when anything is flagged.
+
+Rules stop there on purpose. A rule that fires on a third of a real registry
+teaches people to ignore the linter, so a check earns its place by what it
+catches on a real corpus. Measured across 57 skills, `yaml` flags 5 and
+`trigger` flags 3. A rule requiring bundled files under `scripts/`,
+`references/`, and `assets/` flagged 17, every one of them a repo following its
+own convention, so it is not here.
 
 ## Frontmatter
 

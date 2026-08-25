@@ -15,6 +15,7 @@ from .build import build_marketplace, dumps
 from .catalog import build_catalog
 from . import local
 from .fetch import Workspace, default_cache
+from .lint import FINDINGS
 from .loader import load_bundle
 from .resolve import drift, source_manifest
 from .scan import scan_source
@@ -82,6 +83,28 @@ def cmd_catalog(args: argparse.Namespace) -> int:
         f"wrote {target}: {catalog['totals']['skills']} skills, "
         f"~{catalog['totals']['alwaysOn']:,} tok always-on"
     )
+    return 0
+
+
+def cmd_lint(args: argparse.Namespace) -> int:
+    bundle = load_bundle(args.bundle)
+    workspace = workspace_for(args)
+    roots = {key: workspace.root(source) for key, source in bundle.sources.items()}
+    report(workspace)
+
+    flagged = 0
+    for key, source in bundle.sources.items():
+        for skill in scan_source(source, roots[key]):
+            if not skill.lint:
+                continue
+            flagged += 1
+            print(f"{key}/{skill.rel_path}")
+            for code in skill.lint:
+                print(f"  {code}: {FINDINGS[code]}")
+    if flagged:
+        print(f"\n{flagged} skill(s) flagged")
+        return 1
+    print("no findings: every skill names itself and says when it fires")
     return 0
 
 
@@ -302,6 +325,9 @@ def main(argv: list[str] | None = None) -> int:
     sync.add_argument("--marketplace", type=Path, default=local.DEFAULT_MARKETPLACE)
     sync.add_argument("--dry-run", action="store_true")
     sync.set_defaults(func=cmd_sync_local)
+
+    lint = sub.add_parser("lint", help="report skills that discovery cannot use")
+    lint.set_defaults(func=cmd_lint)
 
     drift_cmd = sub.add_parser("drift", help="report bundle fields that disagree with the source plugin.json")
     drift_cmd.set_defaults(func=cmd_drift)

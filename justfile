@@ -72,9 +72,9 @@ drift:
 orphans: catalog
     @jq -r '.orphans[]' {{ out }}/catalog.json | grep . || echo "none"
 
-# Report skills whose frontmatter fails a strict YAML parse
-lint-skills: catalog
-    @jq -r '.skills[] | select(.strictYaml | not) | "\(.source)/\(.path)"' {{ out }}/catalog.json | grep . || echo "none"
+# Report skills that discovery cannot use
+lint:
+    uv run trove --bundle {{ bundle }} lint
 
 # --- Browse ---
 

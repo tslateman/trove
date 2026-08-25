@@ -218,7 +218,7 @@ function setView(v) {
 function matches(s) {
   if (state.cat && s.category !== state.cat) return false;
   if (state.plug && !s.plugins.includes(state.plug)) return false;
-  if (state.flag === "lint" && s.strictYaml) return false;
+  if (state.flag === "lint" && !s.lint.length) return false;
   if (state.flag === "picked" && !state.picked.has(s.name)) return false;
   if (!state.q) return true;
   return (s.name + " " + s.description + " " + (s.tags || []).join(" ")).toLowerCase().includes(state.q);
@@ -245,7 +245,7 @@ function render() {
   facet($("f-cat"), tally(s => s.category), "cat");
   facet($("f-plug"), tally(s => s.plugins), "plug");
   facet($("f-flag"), [
-    ["lint", skills.filter(s => !s.strictYaml).length],
+    ["lint", skills.filter(s => s.lint.length).length],
     ["picked", state.picked.size],
   ], "flag");
 
@@ -261,7 +261,7 @@ function render() {
       ? `<span class="pill cat">${escapeHtml(r.category)}</span>
          <span class="pill tok">+${r.tokensAlwaysOn} always-on</span>
          <span class="pill inv">${(r.tokensOnInvoke / 1000).toFixed(1)}k on invoke</span>
-         ${r.strictYaml ? "" : '<span class="pill lint">yaml</span>'}`
+         ${(r.lint || []).map(c => `<span class="pill lint">${escapeHtml(c)}</span>`).join("")}`
       : `<span class="pill cat">${escapeHtml(r.category || "—")}</span>
          ${r.version ? `<span class="pill ver">v${escapeHtml(r.version)}</span>` : ""}
          ${r.skills != null ? `<span class="pill">${r.skills} skill${r.skills === 1 ? "" : "s"}</span>` : ""}

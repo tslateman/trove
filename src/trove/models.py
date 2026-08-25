@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .lint import findings
+
 CHARS_PER_TOKEN_FRONTMATTER = 3.03
 FRONTMATTER_OVERHEAD = 4.3
 CHARS_PER_TOKEN_BODY = 2.92
@@ -55,6 +57,10 @@ class Skill:
     def tokens_on_invoke(self) -> int:
         return round(self.body_chars / CHARS_PER_TOKEN_BODY + BODY_OVERHEAD)
 
+    @property
+    def lint(self) -> list[str]:
+        return findings(self.name, self.description, self.strict_yaml)
+
     def to_dict(self) -> dict:
         return {
             "name": self.name,
@@ -64,7 +70,7 @@ class Skill:
             "category": self.category,
             "tokensAlwaysOn": self.tokens_always_on,
             "tokensOnInvoke": self.tokens_on_invoke,
-            "strictYaml": self.strict_yaml,
+            "lint": self.lint,
         }
 
 
