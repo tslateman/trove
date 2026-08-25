@@ -133,11 +133,11 @@ shots dir="shots": catalog
 
 # Format markdown
 fmt:
-    prettier --write '*.md'
+    prettier --write '*.md' 'docs/*.md'
 
 # Check formatting without writing
 fmt-check:
-    prettier --check '*.md'
+    prettier --check '*.md' 'docs/*.md'
 
 # Everything CI should run
 check: fmt-check test drift verify

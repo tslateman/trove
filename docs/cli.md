@@ -1,0 +1,177 @@
+# CLI reference
+
+```
+trove [--bundle BUNDLE] [--out OUT] [--cache CACHE] [--offline] <command>
+```
+
+Every `just` recipe wraps one of these. `just --list` shows the recipes; this
+page documents what they call.
+
+## Global options
+
+| Option          | Default                  | Effect                                                |
+| --------------- | ------------------------ | ----------------------------------------------------- |
+| `--bundle PATH` | `bundles/tslateman.yaml` | The bundle to read                                    |
+| `--out PATH`    | `out`                    | Where `build`, `catalog`, and `serve` write and read  |
+| `--cache PATH`  | `~/.cache/trove/sources` | Where fetched sources are checked out                 |
+| `--offline`     | off                      | Never fetch; index only sources with a local checkout |
+
+`XDG_CACHE_HOME` moves the default cache. `--cache` overrides both.
+
+Recipes take their bundle from the `bundle` variable, so
+`just --set bundle bundles/team.yaml catalog` targets another one.
+
+## scan
+
+Index every source and report token cost.
+
+```bash
+trove scan [-v|--verbose]
+```
+
+```
+skills: 56 skills, ~7,329 tok always-on
+
+total always-on: ~7,329 tok
+```
+
+`--verbose` lists each skill with its always-on cost, its on-invoke cost, and
+its path. Sources with nothing to index report on stderr and do not stop the
+run.
+
+Recipes: `just scan`, `just scan-all`.
+
+## build
+
+Emit `marketplace.json`, resolving each source to a commit sha.
+
+```bash
+trove build [--no-pin]
+```
+
+Writes `<out>/.claude-plugin/marketplace.json`. This is the file
+`claude plugin marketplace add` consumes.
+
+`--no-pin` skips sha resolution and implies `--offline`, so the command reaches
+the network for nothing. A remote-only source cannot inherit a description under
+`--no-pin`, so the bundle must declare one.
+
+Build fails rather than shipping a manifest that points at nothing. Two shapes
+stop it: a `local` path that is declared but missing, and a `skills:` entry that
+matches no scanned skill.
+
+Recipes: `just build`, `just build-offline`.
+
+## catalog
+
+Emit `catalog.json` and copy the static site next to it.
+
+```bash
+trove catalog
+```
+
+```
+wrote out/catalog.json: 56 skills, ~7,329 tok always-on
+```
+
+`catalog.json` carries every skill with its token costs, category, tags, owning
+plugins, and lint state, plus the orphans no plugin ships.
+
+Recipes: `just catalog`, `just catalog-offline`, `just dist`, `just orphans`,
+`just lint-skills`.
+
+## serve
+
+Serve the built site on localhost.
+
+```bash
+trove serve [--port PORT]
+```
+
+Defaults to port 8787. The handler sends no-cache headers and ignores
+conditional requests, so a rebuild shows up on reload. It refuses a port that is
+already serving.
+
+Recipes: `just serve`, `just open`, `just stop`.
+
+## drift
+
+Report bundle fields that disagree with their source `plugin.json`.
+
+```bash
+trove drift
+```
+
+Exits 1 when any restated field disagrees, so `just check` fails on drift. It
+compares `description` and `version`, and it exempts a curated plugin's own
+description, since a curated subset needs its own wording.
+
+Recipe: `just drift`.
+
+## sync-local
+
+Update Claude Code's local marketplace from each source `plugin.json`.
+
+```bash
+trove sync-local [--dry-run] [--marketplace PATH]
+```
+
+Claude Code keeps its own copy of plugin metadata, which drifts silently.
+`sync-local` rewrites only the entries your bundle names and leaves every other
+entry byte-identical. It writes a `.bak` first, and it skips a plugin whose
+source ships no `plugin.json`.
+
+Recipes: `just sync-local-check`, `just sync-local`.
+
+## calibrate
+
+Compare Trove's estimates against Claude Code's own count.
+
+```bash
+trove calibrate <source> <plugin>
+```
+
+```bash
+just calibrate skills skills@local
+```
+
+Runs `claude plugin details <plugin>`, matches component names against the
+scanned source, and prints the per-skill delta with a mean absolute error. Run
+it when Claude Code changes how it counts. The fitted constants live in
+`src/trove/models.py`.
+
+## cache
+
+Report or empty the fetched-source cache.
+
+```bash
+trove cache [--clear]
+```
+
+```
+/Users/you/.cache/trove/sources: 5 checkout(s), 1.9 MiB
+  https-github.com-your-org-monorepo.git/eb4f0760911698f76a8f825e0bf2fb202c53f7d0
+  https-github.com-tslateman-skills.git/e28569421862eb10f34bbe2db5fe3f4d7e4b5e7b
+```
+
+Checkouts are keyed by commit sha, so a warm cache is safe to keep and cheap to
+discard.
+
+Recipes: `just cache`, `just cache-clear`.
+
+## Development recipes
+
+| Recipe        | What it does                                          |
+| ------------- | ----------------------------------------------------- |
+| `just test`   | The unit tests                                        |
+| `just verify` | Serves the catalog and drives it in headless Chromium |
+| `just check`  | Formatting, tests, drift, and the UI check            |
+| `just shots`  | Catalog screenshots in both themes                    |
+| `just fmt`    | Formats markdown with `prettier`                      |
+| `just clean`  | Removes build output                                  |
+
+`just verify` and `just shots` need a Chromium build:
+
+```bash
+uv run --with playwright playwright install chromium
+```

@@ -40,7 +40,9 @@ def _git_checked(
 
 
 def list_remote_refs(source: Source, ref: str) -> dict[str, str]:
-    result = _git("ls-remote", "--", source.clone_url, ref, f"refs/tags/{ref}^{{}}")
+    result = _git(
+        "ls-remote", "--", source.clone_url, ref, f"{ref}^{{}}", f"refs/tags/{ref}^{{}}"
+    )
     if result.returncode != 0:
         raise RuntimeError(
             f"cannot reach {source.clone_url} (ref {ref!r}): {result.stderr.strip()}"
@@ -66,7 +68,7 @@ def resolve_sha(source: Source) -> str:
             f"{source.clone_url}: ref {ref!r} matches both refs/tags/{ref} and "
             f"refs/heads/{ref} — qualify it in the bundle"
         )
-    for candidate in (refs.get(ref), tag, head, refs.get(f"{ref}^{{}}")):
+    for candidate in (refs.get(f"{ref}^{{}}"), tag, head, refs.get(ref)):
         if candidate:
             return candidate
     raise ValueError(

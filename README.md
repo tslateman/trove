@@ -8,6 +8,11 @@ Skills are cheap to write and expensive to keep. Every installed skill spends
 context in every session before it fires. Trove makes that price visible at the
 moment you decide to install.
 
+New here? Start with the [getting started guide](docs/getting-started.md). For
+every command and flag, see the [CLI reference](docs/cli.md). When something
+fails, [troubleshooting](docs/troubleshooting.md) lists the messages and what
+they mean.
+
 ## Why
 
 Claude Code already distributes plugins well: `marketplace.json` carries
@@ -218,6 +223,15 @@ skill name survives into the DOM as a live element.
 
 CI runs the same suite plus a wheel build that asserts the catalog page is
 packaged (`.github/workflows/check.yml`).
+
+## Documentation
+
+| Page                                       | What it covers                            |
+| ------------------------------------------ | ----------------------------------------- |
+| [Getting started](docs/getting-started.md) | Empty directory to published registry     |
+| [CLI reference](docs/cli.md)               | Every command, flag, and recipe           |
+| [Troubleshooting](docs/troubleshooting.md) | What each error means and how to clear it |
+| [ROADMAP](ROADMAP.md)                      | What Trove does not do yet                |
 
 ## License
 

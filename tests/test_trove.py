@@ -778,3 +778,14 @@ def test_a_remote_only_source_reaches_the_catalog(tmp_path):
     )
     assert [s["name"] for s in catalog["skills"]] == ["tidy"]
     assert catalog["plugins"][0]["description"] == "From the source"
+
+
+def test_a_qualified_annotated_tag_peels_to_its_commit(tmp_path):
+    from trove.fetch import resolve_sha
+
+    work = _repo_with_ambiguous_refs(tmp_path)
+    commit = subprocess.run(
+        ["git", "rev-parse", "main"], cwd=work, capture_output=True, text=True, check=True
+    ).stdout.strip()
+    for ref in ("refs/tags/release", "refs/heads/release"):
+        assert resolve_sha(Source(key="s", url=str(work), ref=ref)) == commit
