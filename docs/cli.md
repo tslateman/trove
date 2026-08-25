@@ -167,6 +167,7 @@ Recipes: `just cache`, `just cache-clear`.
 | `just verify` | Serves the catalog and drives it in headless Chromium |
 | `just check`  | Formatting, tests, drift, and the UI check            |
 | `just shots`  | Catalog screenshots in both themes                    |
+| `just demo`   | Records an mp4 walkthrough of the catalog             |
 | `just fmt`    | Formats markdown with `prettier`                      |
 | `just clean`  | Removes build output                                  |
 
@@ -175,3 +176,12 @@ Recipes: `just cache`, `just cache-clear`.
 ```bash
 uv run --with playwright playwright install chromium
 ```
+
+`just demo` needs `shot-scraper`, which brings its own Chromium:
+
+```bash
+uv tool install shot-scraper && shot-scraper install
+```
+
+It writes `out/demo.mp4` by default; `just demo docs/demo.mp4` publishes over
+the recording the README shows.

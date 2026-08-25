@@ -1,0 +1,39 @@
+output: out/demo.webm
+url: http://127.0.0.1:8787/
+viewport:
+  width: 1280
+  height: 800
+cursor: true
+javascript: |
+  navigator.clipboard.writeText = (text) => { window.__copied = text; return Promise.resolve(); }
+wait_for: "article.card >> nth=0"
+scenes:
+  - name: Open the catalog
+    do:
+      - pause: 2.5
+  - name: Narrow to one category
+    do:
+      - click: "#f-cat button >> nth=0"
+      - wait_for: "#f-cat button[aria-pressed=true]"
+      - pause: 1.5
+  - name: Pick three skills and watch the price
+    do:
+      - click: "article.card >> nth=0 >> .pick"
+      - wait_for: "#stackcount:has-text('1 skills')"
+      - pause: 0.8
+      - click: "article.card >> nth=1 >> .pick"
+      - pause: 0.8
+      - click: "article.card >> nth=2 >> .pick"
+      - wait_for: "#stackcount:has-text('3 skills')"
+      - pause: 3.5
+  - name: Copy the generated bundle
+    do:
+      - click: "#copy"
+      - wait_for: "#copy:has-text('Copied')"
+      - js: "if (!(window.__copied || '').includes('source:')) throw new Error('clipboard did not receive the bundle')"
+      - pause: 2
+  - name: Switch to dark
+    do:
+      - click: "#theme"
+      - wait_for: "html[data-theme=dark]"
+      - pause: 3

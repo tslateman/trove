@@ -131,6 +131,30 @@ shots dir="shots": catalog
     uv run --with playwright python scripts/verify_ui.py --port {{ port }} --out {{ out }} --shots {{ dir }}
     echo "wrote {{ dir }}/catalog-light.png and {{ dir }}/catalog-dark.png"
 
+# Record an mp4 walkthrough of the catalog
+demo video="out/demo.mp4": catalog
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v shot-scraper >/dev/null; then
+      echo "demo needs shot-scraper — uv tool install shot-scraper && shot-scraper install" >&2
+      exit 1
+    fi
+    if lsof -nP -iTCP:{{ port }} -sTCP:LISTEN >/dev/null 2>&1; then
+      echo "port {{ port }} is already serving — run 'just stop', or pass --set port NNNN" >&2
+      exit 1
+    fi
+    uv run trove --out {{ out }} serve --port {{ port }} >/dev/null 2>&1 &
+    server=$!
+    trap 'kill $server 2>/dev/null || true' EXIT
+    until curl -sf -o /dev/null http://127.0.0.1:{{ port }}/catalog.json; do
+      kill -0 $server 2>/dev/null || { echo "preview server exited before answering" >&2; exit 1; }
+      sleep 0.2
+    done
+    sed 's|127.0.0.1:8787|127.0.0.1:{{ port }}|' scripts/demo.yml > {{ out }}/demo.yml
+    mp4="{{ video }}"
+    shot-scraper video {{ out }}/demo.yml -o "${mp4%.mp4}.webm" --mp4
+    echo "wrote $mp4"
+
 # Format markdown
 fmt:
     prettier --write '*.md' 'docs/*.md'

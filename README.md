@@ -7,6 +7,13 @@ token cost on every card.
 Every installed skill spends context in every session before it fires. Trove
 makes that price visible at the moment you decide to install.
 
+![Filtering the catalog to one category, picking three skills, and copying the bundle they generate](docs/demo.gif)
+
+Fourteen seconds: filter to a category, pick three skills, watch the always-on
+total move against a 5,000-token budget, and copy the bundle YAML they compose.
+[The mp4](docs/demo.mp4) is the same run at full resolution, and `just demo`
+records it again from `scripts/demo.yml`.
+
 New here? Start with the [getting started guide](docs/getting-started.md). For
 every command and flag, see the [CLI reference](docs/cli.md). When something
 fails, [troubleshooting](docs/troubleshooting.md) lists the messages and what
@@ -243,6 +250,7 @@ just test      # unit tests
 just verify    # drive the built catalog headless, assert it renders
 just check     # formatting, tests, and the UI check
 just shots     # catalog screenshots in both themes
+just demo      # record an mp4 walkthrough of the catalog
 ```
 
 `just verify` serves the site and drives it in headless Chromium. It fails if
@@ -250,6 +258,19 @@ the card count drifts from the catalog, a console error fires, the budget
 readout goes missing, the generated bundle omits a picked skill, the page
 scrolls sideways at 390px, both themes paint the same background, or a hostile
 skill name survives into the DOM as a live element.
+
+`just demo` drives the same page through `scripts/demo.yml` and writes
+`out/demo.mp4`. Every step waits on the state it expects, so a recording that
+finishes is also a passing run. It needs `shot-scraper`:
+
+```bash
+uv tool install shot-scraper && shot-scraper install
+```
+
+The storyboard picks cards by position rather than by name, so it records
+whatever bundle built the catalog. Headless Chromium refuses clipboard writes,
+so the storyboard replaces `navigator.clipboard.writeText` with a stub and then
+asserts the app handed it the generated bundle.
 
 CI runs the same suite plus a wheel build that asserts the catalog page is
 packaged (`.github/workflows/check.yml`).
