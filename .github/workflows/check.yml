@@ -25,7 +25,7 @@ jobs:
           enable-cache: true
       - run: uv sync --all-groups
       - run: uv run --with playwright playwright install --with-deps chromium
-      - run: uv run trove --bundle bundles/demo.yaml --out out catalog
+      - run: uv run trove --bundle bundles/demo.yaml --out out --offline catalog
       - run: |
           uv run trove --out out serve --port 8787 &
           until curl -sf -o /dev/null http://127.0.0.1:8787/catalog.json; do sleep 0.2; done
