@@ -22,6 +22,23 @@ The blocker is a scoring source. Trove indexes and serves; it does not run
 skills. Either an external runner writes results Trove reads, or Trove grows a
 runner. Settle that before designing the schema.
 
+## Serving
+
+Fetching removed the local-checkout dependency, so the catalog can now be built
+anywhere. Publishing it is a deploy step. Serving skill bodies at runtime is not,
+and it is the larger question: a bridge skill costs one skill's always-on tokens
+and fronts the whole registry, but it puts Trove's availability in the path of
+every session that fires a skill.
+
+- [ ] **Publish the catalog.** A CI job that runs `just dist` and deploys `out/`.
+      `claude plugin marketplace add <url>` already consumes what it writes.
+- [ ] **Read surface over the index.** `skill-list`, `skill-get`, and
+      `skill-file-get` answered from `catalog.json` plus the pinned sha. Git
+      already hosts immutable content, so this resolves rather than stores.
+- [ ] **Price the bridge.** Show the always-on delta between installing a plugin
+      and reaching it through a bridge, so the trade is a number rather than a
+      preference.
+
 ## Security and governance
 
 Nothing here exists today. Trove reads frontmatter, counts tokens, and pins a
@@ -65,7 +82,9 @@ Documented in the README under Known limits; repeated here as work.
 
 - [ ] Index plugins that ship agents, commands, or hooks. Today they report zero
       skills.
-- [ ] Catalog a source that has only a remote. Scanning requires a `local:` path,
-      so a remote-only source is buildable but invisible.
+- [x] Catalog a source that has only a remote. Sources are fetched and cached by
+      commit sha, so a bundle indexes the same everywhere, CI included.
+- [ ] Count a skill's bundled files. Only `SKILL.md` reaches the estimate, so a
+      skill carrying `references/` and `scripts/` prices as if it were bare.
 - [ ] Key the stack picker by source and name. Two sources shipping the same
       skill name currently collapse into one entry.

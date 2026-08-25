@@ -13,6 +13,7 @@ from pathlib import Path
 from .build import build_marketplace, dumps
 from .catalog import build_catalog
 from . import local
+from .fetch import Workspace, default_cache
 from .loader import load_bundle
 from .resolve import drift, source_manifest
 from .scan import scan_source
@@ -21,14 +22,27 @@ DEFAULT_BUNDLE = Path("bundles/tslateman.yaml")
 DEFAULT_OUT = Path("out")
 
 
+def workspace_for(args: argparse.Namespace, offline: bool = False) -> Workspace:
+    return Workspace(cache=None if offline or args.offline else args.cache)
+
+
+def report(workspace: Workspace) -> None:
+    for note in workspace.notes:
+        print(note, file=sys.stderr)
+    workspace.notes.clear()
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     bundle = load_bundle(args.bundle)
+    workspace = workspace_for(args)
     total = 0
     for key, source in bundle.sources.items():
-        if source.local is None or not source.local.exists():
-            print(f"{key}: no local checkout ({source.local})", file=sys.stderr)
+        root = workspace.root(source)
+        report(workspace)
+        if root is None:
+            print(f"{key}: no local checkout and fetching is off", file=sys.stderr)
             continue
-        skills = scan_source(source)
+        skills = scan_source(source, root)
         if not skills:
             print(f"{key}: checkout has no shipped skills", file=sys.stderr)
             continue
@@ -44,7 +58,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
 def cmd_build(args: argparse.Namespace) -> int:
     bundle = load_bundle(args.bundle)
-    manifest = build_marketplace(bundle, pin=not args.no_pin)
+    workspace = workspace_for(args, offline=args.no_pin)
+    manifest = build_marketplace(bundle, pin=not args.no_pin, workspace=workspace)
+    report(workspace)
     out = args.out / ".claude-plugin" / "marketplace.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(dumps(manifest), encoding="utf-8")
@@ -54,7 +70,9 @@ def cmd_build(args: argparse.Namespace) -> int:
 
 def cmd_catalog(args: argparse.Namespace) -> int:
     bundle = load_bundle(args.bundle)
-    catalog = build_catalog(bundle)
+    workspace = workspace_for(args)
+    catalog = build_catalog(bundle, workspace=workspace)
+    report(workspace)
     args.out.mkdir(parents=True, exist_ok=True)
     target = args.out / "catalog.json"
     target.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
@@ -68,11 +86,14 @@ def cmd_catalog(args: argparse.Namespace) -> int:
 
 def cmd_drift(args: argparse.Namespace) -> int:
     bundle = load_bundle(args.bundle)
+    workspace = workspace_for(args)
     found = 0
     for spec in bundle.plugins:
-        manifest = source_manifest(bundle.sources[spec.source_key])
+        source = bundle.sources[spec.source_key]
+        manifest = source_manifest(source, workspace.root(source))
+        report(workspace)
         if not manifest:
-            print(f"{spec.name}: no local checkout to compare against", file=sys.stderr)
+            print(f"{spec.name}: no plugin.json to compare against", file=sys.stderr)
             continue
         for field, declared, upstream in drift(spec, manifest):
             found += 1
@@ -92,11 +113,13 @@ def cmd_sync_local(args: argparse.Namespace) -> int:
 
     bundle = load_bundle(args.bundle)
     manifest = json.loads(args.marketplace.read_text(encoding="utf-8"))
-    changes, absent, unsourced = local.plan(bundle, manifest)
+    workspace = workspace_for(args)
+    changes, absent, unsourced = local.plan(bundle, manifest, workspace=workspace)
+    report(workspace)
 
     for name in unsourced:
         print(
-            f"{name}: skipped — source has no local checkout, so no plugin.json to sync from",
+            f"{name}: skipped, its source has no plugin.json to sync from",
             file=sys.stderr,
         )
     for name in absent:
@@ -128,9 +151,11 @@ def cmd_sync_local(args: argparse.Namespace) -> int:
 def cmd_calibrate(args: argparse.Namespace) -> int:
     bundle = load_bundle(args.bundle)
     source = bundle.sources[args.source]
-    estimated = {s.name: s.tokens_always_on for s in scan_source(source)}
+    workspace = workspace_for(args)
+    estimated = {s.name: s.tokens_always_on for s in scan_source(source, workspace.root(source))}
+    report(workspace)
     if not estimated:
-        print(f"no local checkout for {args.source}", file=sys.stderr)
+        print(f"no skills indexed for {args.source}", file=sys.stderr)
         return 1
 
     result = subprocess.run(
@@ -189,10 +214,37 @@ def cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_cache(args: argparse.Namespace) -> int:
+    if args.clear:
+        shutil.rmtree(args.cache, ignore_errors=True)
+        print(f"cleared {args.cache}")
+        return 0
+    if not args.cache.exists():
+        print(f"{args.cache} (empty)")
+        return 0
+    checkouts = sorted(p for p in args.cache.glob("*/*") if p.is_dir())
+    size = sum(f.stat().st_size for f in args.cache.rglob("*") if f.is_file())
+    print(f"{args.cache}: {len(checkouts)} checkout(s), {size / 1_048_576:.1f} MiB")
+    for path in checkouts:
+        print(f"  {path.parent.name}/{path.name}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="trove")
     parser.add_argument("--bundle", type=Path, default=DEFAULT_BUNDLE)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument(
+        "--cache",
+        type=Path,
+        default=default_cache(),
+        help="where fetched sources are checked out",
+    )
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="never fetch; index only sources with a local checkout",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     scan = sub.add_parser("scan", help="index skills and report token cost")
@@ -222,6 +274,10 @@ def main(argv: list[str] | None = None) -> int:
     serve = sub.add_parser("serve", help="serve the built site")
     serve.add_argument("--port", type=int, default=8787)
     serve.set_defaults(func=cmd_serve)
+
+    cache = sub.add_parser("cache", help="report or clear the fetched-source cache")
+    cache.add_argument("--clear", action="store_true")
+    cache.set_defaults(func=cmd_cache)
 
     args = parser.parse_args(argv)
     try:

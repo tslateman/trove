@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .fetch import Workspace
 from .models import Bundle
 from .resolve import effective, source_manifest
 
@@ -13,13 +14,14 @@ SYNCED_FIELDS = ("description", "version")
 
 
 def plan(
-    bundle: Bundle, manifest: dict
+    bundle: Bundle, manifest: dict, workspace: Workspace | None = None
 ) -> tuple[list[tuple[str, str, str, str]], list[str], list[str]]:
+    workspace = workspace if workspace is not None else Workspace()
     known = {}
     unsourced = []
     for spec in bundle.plugins:
         source = bundle.sources[spec.source_key]
-        upstream = source_manifest(source)
+        upstream = source_manifest(source, workspace.root(source))
         if not upstream:
             unsourced.append(spec.name)
             continue

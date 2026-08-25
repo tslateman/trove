@@ -41,6 +41,9 @@ just catalog       # catalog.json + the static site
 just serve         # browse at http://127.0.0.1:8787
 just dist          # build and catalog together, ready to publish
 
+just cache         # what the fetched-source cache holds
+just cache-clear   # empty it
+
 just drift         # bundle fields that disagree with their source plugin.json
 just sync-local-check  # preview local-marketplace updates
 just sync-local        # apply them
@@ -92,16 +95,17 @@ renames:
 
 `local` points at the plugin root — the directory a `skills:` path is relative
 to. A relative `local` resolves against the bundle file, not the working
-directory. It is optional: a source with only a remote builds fine but reports
-no skills in the catalog.
+directory. It is optional: a source with only a remote is fetched at build time,
+so it indexes and catalogs like any other. Declare `local` to iterate on a
+checkout you are editing, not to make a source visible.
 
 A plugin inherits `description`, `version`, `homepage`, and `displayName` from
 its source's `plugin.json`, so the repo that owns a plugin owns its metadata and
 a version bump reaches the registry by itself. Declare a field in the bundle
 only to override it deliberately — a curated subset needs its own description.
 `trove drift` reports any restated field that disagrees with its source, and
-`just check` runs it. A source with no local checkout cannot inherit, so the
-bundle must declare a description for it or the build fails.
+`just check` runs it. Inheritance reads the fetched checkout, so a source needs
+no local clone to supply its own metadata.
 
 `ref` accepts a tag or a branch. Build resolves it to a commit sha, preferring
 an annotated tag's target over the tag object, and refuses to guess when a tag
@@ -124,8 +128,8 @@ change reaches the registry with no bundle edit.
 Claude Code's local marketplace keeps its own copy, which drifts silently.
 `trove sync-local` rewrites the entries your bundle names and leaves every
 other entry byte-identical. It previews with `--dry-run`, writes a `.bak`
-first, and refuses to touch a plugin whose source has no local checkout, since
-there is no `plugin.json` to sync from and the bundle value would be a guess.
+first, and skips any plugin whose source ships no `plugin.json`, since the
+bundle value would then be a guess.
 
 ## Token estimates
 
@@ -146,6 +150,24 @@ skills. `trove calibrate` re-runs that comparison and prints the error.
 
 Re-run `calibrate` when Claude Code changes how it counts; the constants live in
 `src/trove/models.py`.
+
+## Fetching
+
+A source with no `local` checkout is fetched before it is indexed. `trove`
+resolves its ref to a commit sha, shallow-fetches that commit, and caches the
+checkout under `~/.cache/trove/sources/<repo>/<sha>` (`XDG_CACHE_HOME` wins if
+set, `--cache` overrides both). The sha is the cache key, so a second run on an
+unmoved ref reuses the tree and only pays one `git ls-remote`.
+
+Fetching is what lets a bundle build somewhere its author's `~/dev` does not
+exist, which is the requirement for building the registry in CI.
+
+`--offline` disables it, and `build --no-pin` implies it, so neither reaches the
+network. Under `--offline` a source with no checkout reports no skills.
+
+A `local` path that is declared but missing is a mistake worth hearing about, so
+`trove` prints which source fell back and to which remote rather than fetching
+silently. Under `--offline` it stays a hard error.
 
 ## What the scanner refuses to count
 
@@ -171,8 +193,8 @@ UI so the registry can nudge without breaking.
 
 - The catalog indexes skills only. Plugins shipping agents, commands, or hooks
   report zero skills.
-- `local:` paths are required for scanning. A source with only a remote is
-  buildable but not catalogable.
+- Only `SKILL.md` is counted. A skill's `scripts/`, `references/`, and `assets/`
+  cost nothing in the catalog and plenty when the skill fires.
 - Eval scores and invocation counts are not wired up yet.
 - The stack picker keys selections by skill name, so two sources shipping the
   same skill name collapse into one entry.

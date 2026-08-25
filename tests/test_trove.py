@@ -637,3 +637,144 @@ def test_sync_local_fails_when_the_marketplace_is_missing(tmp_path):
         "--bundle", str(_local_bundle(tmp_path, checkout=True)),
         "sync-local", "--marketplace", str(tmp_path / "nope.json"),
     ]) == 1
+
+
+# --- fetching a source that has no local checkout ---
+
+
+def _remote_repo(tmp_path: Path, name: str = "remote", subdir: str = "") -> Path:
+    work = tmp_path / name
+    root = work / subdir if subdir else work
+    skill = root / "skills" / "craft" / "tidy"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("---\nname: tidy\ndescription: Tidy things up.\n---\nbody\n")
+    manifest = root / ".claude-plugin"
+    manifest.mkdir(parents=True)
+    (manifest / "plugin.json").write_text(
+        json.dumps({"name": "remote", "version": "2.1.0", "description": "From the source"})
+    )
+    _git("init", "-q", "-b", "main", cwd=work)
+    _git("config", "user.email", "t@example.com", cwd=work)
+    _git("config", "user.name", "T", cwd=work)
+    _git("add", "-A", cwd=work)
+    _git("commit", "-qm", "one", cwd=work)
+    return work
+
+
+def test_a_source_with_only_a_remote_is_scanned_after_fetching(tmp_path):
+    from trove.fetch import Workspace
+
+    source = Source(key="s", url=str(_remote_repo(tmp_path)), ref="main")
+    workspace = Workspace(cache=tmp_path / "cache")
+    assert [s.name for s in scan_source(source, workspace.root(source))] == ["tidy"]
+
+
+def test_offline_leaves_a_remote_only_source_unscanned(tmp_path):
+    from trove.fetch import Workspace
+
+    source = Source(key="s", url=str(_remote_repo(tmp_path)), ref="main")
+    workspace = Workspace(cache=None)
+    assert workspace.root(source) is None
+    assert scan_source(source, workspace.root(source)) == []
+
+
+def test_a_second_resolve_reuses_the_cached_checkout(tmp_path, monkeypatch):
+    from trove import fetch
+    from trove.fetch import Workspace
+
+    source = Source(key="s", url=str(_remote_repo(tmp_path)), ref="main")
+    workspace = Workspace(cache=tmp_path / "cache")
+    first = workspace.root(source)
+
+    def explode(*args, **kwargs):
+        raise AssertionError("cached checkout was re-fetched")
+
+    monkeypatch.setattr(fetch, "materialize", explode)
+    assert Workspace(cache=tmp_path / "cache").root(source) == first
+
+
+def test_a_missing_local_path_falls_back_to_the_remote_with_a_note(tmp_path):
+    from trove.fetch import Workspace
+
+    source = Source(
+        key="s", url=str(_remote_repo(tmp_path)), ref="main", local=tmp_path / "gone"
+    )
+    workspace = Workspace(cache=tmp_path / "cache")
+    assert [s.name for s in scan_source(source, workspace.root(source))] == ["tidy"]
+    assert any("does not exist" in note and "fetching" in note for note in workspace.notes)
+
+
+def test_a_missing_local_path_still_fails_when_fetching_is_off(tmp_path):
+    from trove.fetch import Workspace
+
+    source = Source(key="s", repo="o/s", local=tmp_path / "gone")
+    with pytest.raises(ValueError, match="does not exist"):
+        Workspace(cache=None).root(source)
+
+
+def test_fetch_treats_a_dash_leading_url_as_a_path_not_a_flag(tmp_path):
+    from trove.fetch import materialize
+
+    marker = tmp_path / "PWNED"
+    source = Source(key="s", url=f"--upload-pack=touch {marker}", ref="HEAD")
+    with pytest.raises(RuntimeError):
+        materialize(source, "HEAD", tmp_path / "dest")
+    assert not marker.exists()
+
+
+def test_a_subdir_source_resolves_inside_the_fetched_checkout(tmp_path):
+    from trove.fetch import Workspace
+
+    work = _remote_repo(tmp_path, subdir="tooling/plugin")
+    source = Source(key="s", url=str(work), ref="main", path="tooling/plugin")
+    root = Workspace(cache=tmp_path / "cache").root(source)
+    assert [s.name for s in scan_source(source, root)] == ["tidy"]
+
+
+def test_a_remote_only_plugin_inherits_its_description_from_the_fetched_manifest(tmp_path):
+    from trove.build import build_marketplace
+    from trove.fetch import Workspace
+
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\nsources:\n  s: {{url: {_remote_repo(tmp_path)}, ref: main}}\n"
+        "plugins:\n  - {name: p, source: s}\n"
+    )
+    manifest = build_marketplace(
+        load_bundle(bundle), pin=False, workspace=Workspace(cache=tmp_path / "cache")
+    )
+    entry = manifest["plugins"][0]
+    assert entry["description"] == "From the source"
+    assert entry["version"] == "2.1.0"
+
+
+def test_curated_paths_are_verified_against_a_fetched_source(tmp_path):
+    from trove.build import build_marketplace
+    from trove.fetch import Workspace
+
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\nsources:\n  s: {{url: {_remote_repo(tmp_path)}, ref: main}}\n"
+        "plugins:\n  - name: p\n    source: s\n    description: d\n"
+        "    skills: [skills/craft/absent]\n"
+    )
+    with pytest.raises(ValueError, match="match no skill"):
+        build_marketplace(
+            load_bundle(bundle), pin=False, workspace=Workspace(cache=tmp_path / "cache")
+        )
+
+
+def test_a_remote_only_source_reaches_the_catalog(tmp_path):
+    from trove.catalog import build_catalog
+    from trove.fetch import Workspace
+
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\nsources:\n  s: {{url: {_remote_repo(tmp_path)}, ref: main}}\n"
+        "plugins:\n  - {name: p, source: s}\n"
+    )
+    catalog = build_catalog(
+        load_bundle(bundle), workspace=Workspace(cache=tmp_path / "cache")
+    )
+    assert [s["name"] for s in catalog["skills"]] == ["tidy"]
+    assert catalog["plugins"][0]["description"] == "From the source"

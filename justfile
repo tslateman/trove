@@ -34,11 +34,23 @@ build-offline:
 catalog:
     uv run trove --bundle {{ bundle }} --out {{ out }} catalog
 
+# Generate catalog.json from local checkouts only, without fetching
+catalog-offline:
+    uv run trove --bundle {{ bundle }} --out {{ out }} --offline catalog
+
 # Build everything the registry publishes
 dist: build catalog
 
 # Build everything without reaching the network
-dist-offline: build-offline catalog
+dist-offline: build-offline catalog-offline
+
+# Report what the fetched-source cache holds
+cache:
+    uv run trove cache
+
+# Empty the fetched-source cache
+cache-clear:
+    uv run trove cache --clear
 
 # Compare token estimates against Claude Code, e.g. `just calibrate skills skills@local`
 calibrate source plugin:

@@ -1,61 +1,30 @@
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 
+from .fetch import Workspace, list_remote_refs, resolve_sha
 from .models import Bundle, PluginSpec, Source
 from .resolve import effective, source_manifest
+
+__all__ = [
+    "SCHEMA",
+    "build_marketplace",
+    "dumps",
+    "list_remote_refs",
+    "plugin_entry",
+    "resolve_sha",
+    "verify_curated_paths",
+]
 
 SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
 
 
-def list_remote_refs(source: Source, ref: str) -> dict[str, str]:
-    result = subprocess.run(
-        ["git", "ls-remote", "--", source.clone_url, ref, f"refs/tags/{ref}^{{}}"],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"cannot reach {source.clone_url} (ref {ref!r}): {result.stderr.strip()}"
-        )
-    refs = {}
-    for line in result.stdout.strip().splitlines():
-        sha, _, name = line.partition("\t")
-        if name:
-            refs[name] = sha
-    return refs
-
-
-def resolve_sha(source: Source) -> str:
-    ref = source.ref or "HEAD"
-    refs = list_remote_refs(source, ref)
-    if not refs:
-        raise ValueError(f"{source.clone_url} has no ref {ref!r}")
-
-    tag = refs.get(f"refs/tags/{ref}^{{}}") or refs.get(f"refs/tags/{ref}")
-    head = refs.get(f"refs/heads/{ref}")
-    if tag and head:
-        raise ValueError(
-            f"{source.clone_url}: ref {ref!r} matches both refs/tags/{ref} and "
-            f"refs/heads/{ref} — qualify it in the bundle"
-        )
-    for candidate in (refs.get(ref), tag, head, refs.get(f"{ref}^{{}}")):
-        if candidate:
-            return candidate
-    raise ValueError(
-        f"{source.clone_url}: ref {ref!r} is ambiguous across {sorted(refs)}"
-    )
-
-
-def plugin_entry(spec: PluginSpec, source: Source, sha: str | None) -> dict:
-    resolved = effective(spec, source_manifest(source))
+def plugin_entry(spec: PluginSpec, source: Source, sha: str | None, root=None) -> dict:
+    resolved = effective(spec, source_manifest(source, root))
     if not resolved["description"]:
         raise ValueError(
-            f"plugin {spec.name!r} has no description: source {spec.source_key!r} has no local "
-            "checkout to inherit one from, so the bundle must declare it"
+            f"plugin {spec.name!r} has no description: source {spec.source_key!r} has no "
+            "plugin.json to inherit one from, so the bundle must declare it"
         )
     entry: dict = {
         "name": spec.name,
@@ -77,12 +46,17 @@ def plugin_entry(spec: PluginSpec, source: Source, sha: str | None) -> dict:
     return entry
 
 
-def build_marketplace(bundle: Bundle, pin: bool = True) -> dict:
-    verify_curated_paths(bundle)
+def build_marketplace(
+    bundle: Bundle, pin: bool = True, workspace: Workspace | None = None
+) -> dict:
+    workspace = workspace if workspace is not None else Workspace()
+    roots = {key: workspace.root(source) for key, source in bundle.sources.items()}
+    verify_curated_paths(bundle, roots)
+
     shas = {}
     if pin:
         for key, source in bundle.sources.items():
-            shas[key] = resolve_sha(source)
+            shas[key] = workspace.sha(source)
 
     manifest = {
         "$schema": SCHEMA,
@@ -90,7 +64,12 @@ def build_marketplace(bundle: Bundle, pin: bool = True) -> dict:
         "description": bundle.description,
         "owner": bundle.owner,
         "plugins": [
-            plugin_entry(spec, bundle.sources[spec.source_key], shas.get(spec.source_key))
+            plugin_entry(
+                spec,
+                bundle.sources[spec.source_key],
+                shas.get(spec.source_key),
+                roots.get(spec.source_key),
+            )
             for spec in bundle.plugins
         ],
     }
@@ -99,7 +78,7 @@ def build_marketplace(bundle: Bundle, pin: bool = True) -> dict:
     return manifest
 
 
-def verify_curated_paths(bundle: Bundle) -> None:
+def verify_curated_paths(bundle: Bundle, roots: dict | None = None) -> None:
     from .scan import scan_source
 
     scanned: dict[str, set[str]] = {}
@@ -107,16 +86,19 @@ def verify_curated_paths(bundle: Bundle) -> None:
         if not spec.skills:
             continue
         source = bundle.sources[spec.source_key]
-        if source.local is None:
+        root = (roots or {}).get(spec.source_key) or source.local
+        if root is None:
             continue
         if spec.source_key not in scanned:
-            scanned[spec.source_key] = {s.rel_path for s in scan_source(source)}
+            scanned[spec.source_key] = {s.rel_path for s in scan_source(source, root)}
         found = scanned[spec.source_key]
         missing = [
             selection
             for selection in spec.selections
             if not any(
-                path.startswith(selection) if selection.endswith("/") else path == selection
+                path.startswith(selection)
+                if selection.endswith("/")
+                else path == selection
                 for path in found
             )
         ]

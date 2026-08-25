@@ -1,24 +1,33 @@
 from __future__ import annotations
 
+from .fetch import Workspace
 from .models import Bundle
 from .resolve import effective, source_manifest
 from .scan import scan_source
 
 
-def build_catalog(bundle: Bundle) -> dict:
+def build_catalog(bundle: Bundle, workspace: Workspace | None = None) -> dict:
+    workspace = workspace if workspace is not None else Workspace()
+    roots = {key: workspace.root(source) for key, source in bundle.sources.items()}
+
     plugins_by_source: dict[str, list] = {}
     for spec in bundle.plugins:
         plugins_by_source.setdefault(spec.source_key, []).append(spec)
 
     resolved = {
-        spec.name: effective(spec, source_manifest(bundle.sources[spec.source_key]))
+        spec.name: effective(
+            spec,
+            source_manifest(
+                bundle.sources[spec.source_key], roots.get(spec.source_key)
+            ),
+        )
         for spec in bundle.plugins
     }
     records = []
     orphans = []
     for key, source in bundle.sources.items():
         owners = plugins_by_source.get(key, [])
-        for skill in scan_source(source):
+        for skill in scan_source(source, roots.get(key)):
             selecting = [spec for spec in owners if spec.selects(skill.rel_path)]
             if not selecting:
                 orphans.append(f"{key}:{skill.rel_path}")
@@ -29,7 +38,12 @@ def build_catalog(bundle: Bundle) -> dict:
                 {tag for spec in selecting if spec.skills for tag in spec.tags}
             )
             record["homepage"] = next(
-                (h for h in (resolved[spec.name]["homepage"] for spec in selecting) if h), None
+                (
+                    h
+                    for h in (resolved[spec.name]["homepage"] for spec in selecting)
+                    if h
+                ),
+                None,
             )
             records.append(record)
 

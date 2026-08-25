@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from .models import PluginSpec, Source
 
 INHERITABLE = ("description", "version", "homepage", "displayName")
 
 
-def source_manifest(source: Source) -> dict:
-    if source.local is None:
+def source_manifest(source: Source, root: Path | None = None) -> dict:
+    root = root if root is not None else source.local
+    if root is None:
         return {}
-    manifest = source.local / ".claude-plugin" / "plugin.json"
+    manifest = root / ".claude-plugin" / "plugin.json"
     if not manifest.exists():
         return {}
     return json.loads(manifest.read_text(encoding="utf-8"))

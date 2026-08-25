@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 
 from . import frontmatter
+from .fetch import local_root
 from .models import Skill, Source
 
 
@@ -58,12 +59,11 @@ def category_for(rel_path: str, source_key: str) -> str:
     return source_key
 
 
-def scan_source(source: Source) -> list[Skill]:
-    root = source.local
+def scan_source(source: Source, root: Path | None = None) -> list[Skill]:
     if root is None:
-        return []
-    if not root.exists():
-        raise ValueError(f"source {source.key!r}: local path {root} does not exist")
+        if source.local is None:
+            return []
+        root = local_root(source.key, source.local)
     skills = []
     for skill_file in sorted(root.rglob("SKILL.md")):
         rel_dir = skill_file.parent.relative_to(root).as_posix()
