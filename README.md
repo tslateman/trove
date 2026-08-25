@@ -60,20 +60,26 @@ just calibrate skills skills@local   # check estimates against Claude Code
 `just --list` shows the rest. Every recipe takes its bundle from the `bundle`
 variable, so `just --set bundle bundles/team.yaml catalog` targets another one.
 
-Three bundles ship with the repo: `tslateman.yaml` is the real registry,
-`example.yaml` is a commented starter to copy, and `demo.yaml` points at a
-fixture repo under `tests/fixtures` so CI and `just verify` have a hermetic
-target.
+Two bundles ship with the repo. `example.yaml` is a commented starter to copy,
+and `demo.yaml` points at a fixture repo under `tests/fixtures` so CI and
+`just verify` have a hermetic target.
+
+Your own registry lives in `bundles/local.yaml`, which every recipe reads by
+default and `.gitignore` keeps out of the repo:
+
+```bash
+cp bundles/example.yaml bundles/local.yaml
+```
 
 ## The bundle
 
 One file describes sources and the plugins composed from them.
 
 ```yaml
-name: tslateman
+name: mine
 sources:
   skills:
-    repo: tslateman/skills
+    repo: your-org/skills
     ref: v0.5.0 # optional; resolved to a commit sha at build time
     local: ~/dev/skills # optional, enables scanning before a remote exists
 
@@ -121,7 +127,7 @@ a `marketplace.json` a teammate consumes in two commands:
 
 ```bash
 claude plugin marketplace add <your-registry>
-claude plugin install review-kit@tslateman
+claude plugin install review-kit@mine
 ```
 
 ## Editing a plugin's description
@@ -179,8 +185,8 @@ silently. Under `--offline` it stays a hard error.
 `skills/trove` is a bridge: install that one skill and a session can list every
 skill in the catalog, read one body, and pull one bundled file, paying for what
 it opens instead of for what exists. It costs 111 tokens always-on against the
-7,853 that installing every plugin in `tslateman.yaml` costs across its 62
-skills.
+7,853 that installing every plugin in the registry this repo publishes costs
+across its 62 skills.
 
 The bridge needs no server. `catalog.json` carries a `sources` block naming each
 source's url and pinned sha, so a skill's body resolves to a raw git URL at an

@@ -128,6 +128,11 @@ def test_bundle_rejects_plugin_naming_unknown_source(tmp_path):
         load_bundle(bundle)
 
 
+def test_a_bundle_that_does_not_exist_names_the_starter_to_copy(tmp_path):
+    with pytest.raises(ValueError, match="bundles/example.yaml"):
+        load_bundle(tmp_path / "local.yaml")
+
+
 def test_unpinned_build_emits_manifest_without_shas(tmp_path):
     bundle = tmp_path / "b.yaml"
     bundle.write_text(

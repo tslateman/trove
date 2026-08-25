@@ -5,6 +5,18 @@ Trove bug, so the fix is in your bundle or your environment.
 
 ## The build stops
 
+### `bundle bundles/local.yaml does not exist. Copy bundles/example.yaml to it, or name another with --bundle`
+
+Every recipe reads `bundles/local.yaml` by default, and that file is
+gitignored, so a fresh clone has none. Make one:
+
+```bash
+cp bundles/example.yaml bundles/local.yaml
+```
+
+Then point its sources at your repos. To keep a bundle elsewhere, pass
+`--bundle path/to/it.yaml`, or `just --set bundle path/to/it.yaml <recipe>`.
+
 ### `plugin 'p' names unknown source 'nope'`
 
 A plugin's `source:` does not match any key under `sources:`. The key is the
@@ -13,7 +25,7 @@ name on the left of the colon, not the repo:
 ```yaml
 sources:
   skills: # <- this is the key
-    repo: tslateman/skills
+    repo: your-org/skills
 
 plugins:
   - name: p

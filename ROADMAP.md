@@ -38,7 +38,7 @@ and reaching sources git does not serve publicly.
       each source's url and pinned sha. Git hosts the immutable content, so the
       surface resolves rather than stores and needs no server.
 - [x] **Price the bridge.** The bridge costs 111 tokens always-on. Installing
-      every plugin in `tslateman.yaml` costs 7,853 across 62 skills. Break-even
+      every plugin in the published registry costs 7,853 across 62 skills. Break-even
       is two skills.
 - [ ] **Serve the bodies the bridge points at.** Raw GitHub URLs work for public
       sources and nothing else. A private source needs a fetching endpoint,

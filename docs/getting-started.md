@@ -42,7 +42,7 @@ A bundle names the repos you draw from and the plugins you compose out of them.
 Twelve lines is enough:
 
 ```yaml
-# bundles/mine.yaml
+# bundles/local.yaml
 name: mine
 description: My skills, priced before I install them
 owner:
@@ -50,7 +50,7 @@ owner:
 
 sources:
   skills:
-    repo: tslateman/skills
+    repo: your-org/skills
 
 plugins:
   - name: skills
@@ -64,12 +64,20 @@ no `skills:` list ships everything its source holds.
 You do not need a checkout. Trove fetches a source it has not seen, so the same
 bundle builds on your laptop and in CI. See [Fetching](../README.md#fetching).
 
-Copy `bundles/example.yaml` for a commented starter.
+Write it to `bundles/local.yaml`. Every recipe reads that path by default, and
+`.gitignore` keeps it out of the repo, so your registry stays yours:
+
+```bash
+cp bundles/example.yaml bundles/local.yaml
+```
+
+`example.yaml` is a commented starter covering whole-repo sources, monorepo
+subdirectories, cherry-picked subsets, and renames.
 
 ## Step 2: Price the skills
 
 ```bash
-just --set bundle bundles/mine.yaml scan
+just scan
 ```
 
 ```
@@ -81,7 +89,7 @@ total always-on: ~7,329 tok
 Add `--verbose` for the per-skill breakdown:
 
 ```bash
-uv run trove --bundle bundles/mine.yaml scan --verbose
+just scan-all
 ```
 
 ```
@@ -106,7 +114,7 @@ numbers are fitted and how to re-check them.
 ## Step 3: Browse the catalog
 
 ```bash
-just --set bundle bundles/mine.yaml serve
+just serve
 ```
 
 Open http://127.0.0.1:8787. Search by name, description, or tag. Pick skills to
@@ -118,7 +126,7 @@ Press `just stop` when you are done.
 ## Step 4: Pin and publish
 
 ```bash
-just --set bundle bundles/mine.yaml build
+just build
 ```
 
 ```
@@ -130,7 +138,7 @@ Every source resolves to a commit sha:
 ```json
 {
   "source": "url",
-  "url": "https://github.com/tslateman/skills.git",
+  "url": "https://github.com/your-org/skills.git",
   "sha": "e28569421862eb10f34bbe2db5fe3f4d7e4b5e7b"
 }
 ```

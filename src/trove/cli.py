@@ -18,7 +18,7 @@ from .loader import load_bundle
 from .resolve import drift, source_manifest
 from .scan import scan_source
 
-DEFAULT_BUNDLE = Path("bundles/tslateman.yaml")
+DEFAULT_BUNDLE = Path("bundles/local.yaml")
 DEFAULT_OUT = Path("out")
 
 

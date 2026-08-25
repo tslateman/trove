@@ -1,3 +1,5 @@
+# Copy this to bundles/local.yaml, which every recipe reads by default and
+# .gitignore keeps out of the repo, then point it at your own repos.
 name: example
 description: A starter registry — copy this, point it at your own repos
 owner:

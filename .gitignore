@@ -8,3 +8,8 @@ out/
 .cache/
 shots/
 .DS_Store
+
+# Personal bundles. `example.yaml` and `demo.yaml` are the ones that ship.
+bundles/*.yaml
+!bundles/example.yaml
+!bundles/demo.yaml

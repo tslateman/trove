@@ -11,7 +11,7 @@ page documents what they call.
 
 | Option          | Default                  | Effect                                                |
 | --------------- | ------------------------ | ----------------------------------------------------- |
-| `--bundle PATH` | `bundles/tslateman.yaml` | The bundle to read                                    |
+| `--bundle PATH` | `bundles/local.yaml`     | The bundle to read                                    |
 | `--out PATH`    | `out`                    | Where `build`, `catalog`, and `serve` write and read  |
 | `--cache PATH`  | `~/.cache/trove/sources` | Where fetched sources are checked out                 |
 | `--offline`     | off                      | Never fetch; index only sources with a local checkout |

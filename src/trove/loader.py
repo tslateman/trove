@@ -15,6 +15,11 @@ def expand(value: str | None, base: Path) -> Path | None:
 
 
 def load_bundle(path: Path) -> Bundle:
+    if not path.exists():
+        raise ValueError(
+            f"bundle {path} does not exist. Copy bundles/example.yaml to it, "
+            "or name another with --bundle"
+        )
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
 
     sources = {

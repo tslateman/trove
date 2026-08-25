@@ -1,6 +1,6 @@
 # Trove: a registry for Claude Code skills
 
-bundle := "bundles/tslateman.yaml"
+bundle := "bundles/local.yaml"
 out := "out"
 port := "8787"
 
