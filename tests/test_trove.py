@@ -1106,3 +1106,24 @@ def test_lint_exits_zero_when_nothing_is_flagged(tmp_path):
         "plugins:\n  - {name: p, source: s, description: d}\n"
     )
     assert main(["--bundle", str(bundle), "--offline", "lint"]) == 0
+
+
+def test_the_ui_probe_pushes_the_shape_the_scanner_emits():
+    """A field the scanner emits and the probe omits reaches the page undefined."""
+    import re
+
+    probe = Path("scripts/verify_ui.py").read_text()
+    literal = probe.split("state.data.skills.push({", 1)[1].split("});", 1)[0]
+    keys = set(re.findall(r"(\w+):", literal))
+    emitted = set(
+        Skill(
+            name="n",
+            description="d",
+            rel_path="p",
+            source_key="s",
+            category="c",
+            body_chars=1,
+            frontmatter_chars=1,
+        ).to_dict()
+    )
+    assert emitted <= keys, f"the probe omits {sorted(emitted - keys)}"

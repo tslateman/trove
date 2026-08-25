@@ -31,7 +31,7 @@ XSS_PROBE = """() => {
   const probe = '<img src=x onerror="window.__pwned=1">';
   state.data.skills.push({name: probe, description: probe, category: probe, tags: [probe],
     path: 'probe', source: 'probe', tokensAlwaysOn: 1, tokensOnInvoke: 1,
-    strictYaml: true, plugins: ['probe']});
+    lint: [probe], plugins: ['probe']});
   render();
   const injected = document.querySelectorAll('.grid img, aside img').length;
   state.data.skills.pop();
