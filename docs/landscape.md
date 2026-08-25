@@ -33,7 +33,7 @@ records what each one does and what each one measures.
 | What does it cost | **Tokens, always-on and on invoke** | —       | —                               | —                             |
 | Does it fire      | Planned                             | —       | —                               | Install counts                |
 
-Tessl's Impact score is the only measured behavior claim in the group.
+Tessl measures behavior; the other three do not.
 `tessl scenario generate` builds validated scenarios, the agent solves each one
 twice — once without the skill and once with it — and a judge scores both
 against a per-scenario rubric. The published example reads 71% to 92%. The
@@ -66,9 +66,6 @@ Tessl scores what Trove's roadmap lists as open. Publishing runs quality scoring
 `tessl eval run` runs standalone, and `tessl review run security` runs a Snyk
 scan. Trove's eval and security items are unstarted.
 
-An audit of 22,511 public skills found about 6.3 issues each, and 36% of tested
-skills carried prompt-injection exposure.
-
 ## Sources
 
 - [Tessl CLI commands](https://docs.tessl.io/reference/cli-commands.md),
@@ -79,5 +76,4 @@ skills carried prompt-injection exposure.
 - [Vercel on Agent Skills](https://vercel.com/kb/guide/agent-skills-creating-installing-and-sharing-reusable-agent-context),
   [skills.sh: npm for Agent Skills](https://dev.to/stevengonsalvez/skillssh-npm-for-agent-skills-35jc)
 - [Claude Code's skill listing budget](https://claudefa.st/blog/guide/mechanics/skill-listing-budget)
-- [The Agent Skills ecosystem in 2026](https://agentman.ai/blog/agent-skills-ecosystem-report-2026)
 - [Agent Skills specification](https://agentskills.io/specification)
