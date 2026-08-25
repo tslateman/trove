@@ -25,19 +25,24 @@ runner. Settle that before designing the schema.
 ## Serving
 
 Fetching removed the local-checkout dependency, so the catalog can now be built
-anywhere. Publishing it is a deploy step. Serving skill bodies at runtime is not,
-and it is the larger question: a bridge skill costs one skill's always-on tokens
-and fronts the whole registry, but it puts Trove's availability in the path of
-every session that fires a skill.
+anywhere. Publishing it is a deploy step. The bridge skill turned out to be one
+too: `catalog.json` names each source's url and sha, and git serves the body, so
+a session reaching a skill through the bridge depends on the host of the catalog
+and on GitHub, never on a Trove process. What remains is publishing the catalog
+and reaching sources git does not serve publicly.
 
 - [ ] **Publish the catalog.** A CI job that runs `just dist` and deploys `out/`.
       `claude plugin marketplace add <url>` already consumes what it writes.
-- [ ] **Read surface over the index.** `skill-list`, `skill-get`, and
-      `skill-file-get` answered from `catalog.json` plus the pinned sha. Git
-      already hosts immutable content, so this resolves rather than stores.
-- [ ] **Price the bridge.** Show the always-on delta between installing a plugin
-      and reaching it through a bridge, so the trade is a number rather than a
-      preference.
+- [x] **Read surface over the index.** `skills/trove` answers list, get, and
+      file-get from `catalog.json` plus the `sources` block, which now carries
+      each source's url and pinned sha. Git hosts the immutable content, so the
+      surface resolves rather than stores and needs no server.
+- [x] **Price the bridge.** The bridge costs 111 tokens always-on. Installing
+      every plugin in `tslateman.yaml` costs 7,853 across 62 skills. Break-even
+      is two skills.
+- [ ] **Serve the bodies the bridge points at.** Raw GitHub URLs work for public
+      sources and nothing else. A private source needs a fetching endpoint,
+      which puts availability back in the path.
 
 ## Security and governance
 

@@ -41,7 +41,7 @@ def strict_yaml_ok(text: str) -> bool:
     return True
 
 
-EXCLUDED_DIRS = {"node_modules"}
+EXCLUDED_DIRS = {"node_modules", "tests"}
 
 
 def is_shipped(rel_path: str) -> bool:

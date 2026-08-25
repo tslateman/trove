@@ -174,10 +174,38 @@ A `local` path that is declared but missing is a mistake worth hearing about, so
 `trove` prints which source fell back and to which remote rather than fetching
 silently. Under `--offline` it stays a hard error.
 
+## Reading without installing
+
+`skills/trove` is a bridge: install that one skill and a session can list every
+skill in the catalog, read one body, and pull one bundled file, paying for what
+it opens instead of for what exists. It costs 111 tokens always-on against the
+7,853 that installing every plugin in `tslateman.yaml` costs across its 62
+skills.
+
+The bridge needs no server. `catalog.json` carries a `sources` block naming each
+source's url and pinned sha, so a skill's body resolves to a raw git URL at an
+immutable commit:
+
+```bash
+jq -r --arg n zoom-out '
+  . as $c | $c.skills[] | select(.name == $n)
+  | $c.sources[.source] as $src
+  | ($src.url | sub("^https://github.com/"; "") | sub("\\.git$"; "")) as $repo
+  | "https://raw.githubusercontent.com/\($repo)/\($src.sha)/\(.path)/SKILL.md"
+' out/catalog.json
+```
+
+Reading is governed by a disclosure contract the skill states outright:
+descriptions to choose, one body once chosen, one file when the body names it.
+Without it a reader that can fetch anything fetches everything, and the saving
+is gone.
+
 ## What the scanner refuses to count
 
 - Anything under a dot-directory. A repo's own `.claude/skills/` holds skills it
   _consumes_, not skills it _ships_.
+- Anything under `tests/`. A fixture skill is one a repo tests against, not one
+  it ships. A source rooted at a fixture directory still indexes normally.
 - Skills no plugin selects. These are reported as `orphans` in `catalog.json`
   rather than silently catalogued.
 

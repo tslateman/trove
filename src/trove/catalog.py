@@ -1,14 +1,25 @@
 from __future__ import annotations
 
 from .fetch import Workspace
-from .models import Bundle
+from .models import Bundle, Source
 from .resolve import effective, source_manifest
 from .scan import scan_source
+
+
+def source_entry(source: Source, sha: str | None) -> dict:
+    if not (source.repo or source.url):
+        return {"local": str(source.local)}
+    return source.marketplace_source(sha)
 
 
 def build_catalog(bundle: Bundle, workspace: Workspace | None = None) -> dict:
     workspace = workspace if workspace is not None else Workspace()
     roots = {key: workspace.root(source) for key, source in bundle.sources.items()}
+    shas = {
+        key: workspace.sha(source)
+        for key, source in bundle.sources.items()
+        if workspace.cache is not None and (source.repo or source.url)
+    }
 
     plugins_by_source: dict[str, list] = {}
     for spec in bundle.plugins:
@@ -52,6 +63,10 @@ def build_catalog(bundle: Bundle, workspace: Workspace | None = None) -> dict:
         "registry": bundle.name,
         "description": bundle.description,
         "owner": bundle.owner,
+        "sources": {
+            key: source_entry(source, shas.get(key))
+            for key, source in bundle.sources.items()
+        },
         "plugins": [
             {
                 "name": spec.name,

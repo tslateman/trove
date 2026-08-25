@@ -68,6 +68,7 @@ def test_category_falls_back_to_source_when_layout_is_flat(path, source, expecte
         (".claude/skills/gitnexus/gitnexus-cli", False),
         ("node_modules/pkg/skills/x", False),
         ("skills/.hidden/x", False),
+        ("tests/fixtures/demo-repo/skills/craft/demo-craft", False),
     ],
 )
 def test_consumer_side_skills_are_excluded(path, shipped):
@@ -177,6 +178,16 @@ def test_skills_no_plugin_ships_are_reported_as_orphans(tmp_path):
     catalog = build_catalog(load_bundle(_bundle_with_curated_plugin(tmp_path)))
     assert [r["name"] for r in catalog["skills"]] == ["go-review"]
     assert catalog["orphans"] == ["s:skills/draw/excalidraw"]
+
+
+def test_catalog_carries_the_source_a_skill_body_resolves_from(tmp_path):
+    from trove.catalog import build_catalog
+
+    catalog = build_catalog(load_bundle(_bundle_with_curated_plugin(tmp_path)))
+    assert catalog["sources"]["s"] == {
+        "source": "url",
+        "url": "https://github.com/o/s.git",
+    }
 
 
 def test_curated_plugin_tags_reach_only_the_skills_it_selects(tmp_path):
