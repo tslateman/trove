@@ -33,8 +33,8 @@ demo: 3 skills, ~118 tok always-on
 total always-on: ~118 tok
 ```
 
-That is the whole product in one line. Three skills cost 118 tokens of context
-in every session, whether or not they ever fire.
+Three skills cost 118 tokens of context in every session, whether or not they
+ever fire.
 
 ## Step 1: Describe your registry
 
@@ -118,8 +118,7 @@ just serve
 ```
 
 Open http://127.0.0.1:8787. Search by name, description, or tag. Pick skills to
-build a stack and watch the always-on total move against a budget. The picker is
-the point: it makes you spend a budget rather than collect skills.
+build a stack and watch the always-on total move against a budget.
 
 Press `just stop` when you are done.
 
@@ -163,7 +162,7 @@ costs. Compare it against Trove's estimate with
 
 ## Step 6: Curate a subset
 
-A whole repo is rarely the right install. Cherry-pick without forking:
+Cherry-pick without forking:
 
 ```yaml
 plugins:

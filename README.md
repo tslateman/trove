@@ -4,9 +4,8 @@ A registry for Claude Code skills. Author skills in whatever repo owns them,
 compose them into bundles, publish a marketplace, and browse the catalog with
 token cost on every card.
 
-Skills are cheap to write and expensive to keep. Every installed skill spends
-context in every session before it fires. Trove makes that price visible at the
-moment you decide to install.
+Every installed skill spends context in every session before it fires. Trove
+makes that price visible at the moment you decide to install.
 
 New here? Start with the [getting started guide](docs/getting-started.md). For
 every command and flag, see the [CLI reference](docs/cli.md). When something
@@ -18,10 +17,9 @@ they mean.
 Claude Code already distributes plugins well: `marketplace.json` carries
 categories, tags, version and sha pinning, a `renames` map for deprecation, and
 a `skills[]` field that cherry-picks individual skill directories out of a repo.
-What it lacks is the layer that decides what belongs in a session.
 
-Trove is that layer. It generates the marketplace instead of hand-editing it,
-and it prices every skill so a bundle can be held to a budget.
+Trove generates the marketplace instead of hand-editing it, and prices every
+skill so a bundle can be held to a budget.
 
 ## Install
 
@@ -171,7 +169,7 @@ set, `--cache` overrides both). The sha is the cache key, so a second run on an
 unmoved ref reuses the tree and only pays one `git ls-remote`.
 
 Fetching is what lets a bundle build somewhere its author's `~/dev` does not
-exist, which is the requirement for building the registry in CI.
+exist, so the registry builds in CI.
 
 `--offline` disables it, and `build --no-pin` implies it, so neither reaches the
 network. Under `--offline` a source with no checkout reports no skills.
