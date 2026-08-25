@@ -201,10 +201,8 @@ jq -r --arg n zoom-out '
 ' out/catalog.json
 ```
 
-Reading is governed by a disclosure contract the skill states outright:
-descriptions to choose, one body once chosen, one file when the body names it.
-Without it a reader that can fetch anything fetches everything, and the saving
-is gone.
+The skill states its disclosure contract outright: descriptions to choose, one
+body once chosen, one file when the body names it.
 
 ## What the scanner refuses to count
 
@@ -260,12 +258,13 @@ packaged (`.github/workflows/check.yml`).
 
 ## Documentation
 
-| Page                                       | What it covers                            |
-| ------------------------------------------ | ----------------------------------------- |
-| [Getting started](docs/getting-started.md) | Empty directory to published registry     |
-| [CLI reference](docs/cli.md)               | Every command, flag, and recipe           |
-| [Troubleshooting](docs/troubleshooting.md) | What each error means and how to clear it |
-| [ROADMAP](ROADMAP.md)                      | What Trove does not do yet                |
+| Page                                       | What it covers                              |
+| ------------------------------------------ | ------------------------------------------- |
+| [Getting started](docs/getting-started.md) | Empty directory to published registry       |
+| [CLI reference](docs/cli.md)               | Every command, flag, and recipe             |
+| [Troubleshooting](docs/troubleshooting.md) | What each error means and how to clear it   |
+| [Landscape](docs/landscape.md)             | Trove against PostHog, Tessl, and skills.sh |
+| [ROADMAP](ROADMAP.md)                      | What Trove does not do yet                  |
 
 ## License
 
