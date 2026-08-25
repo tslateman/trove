@@ -21,19 +21,19 @@ records what each one does and what each one measures.
 | Lands at                | Claude Code's plugin directory                              | Nowhere                  | `.tessl/plugins/` or `~/.tessl/`           | `.claude/skills/`, project or global |
 | Pinned by               | Commit sha, resolved at build                               | Immutable version number | Version in `tessl.json`                    | No pin syntax documented             |
 | Publish step            | None — a bundle composes what repos already own             | Web UI or `skill-create` | `tessl skill publish`, lints first         | None; install telemetry surfaces it  |
-| Read without installing | Yes, via `skills/trove`                                     | Yes, the only mode       | No                                         | No                                   |
-| Runtime dependency      | Catalog host and GitHub                                     | PostHog uptime           | None after install                         | None after install                   |
+| Read without installing | Yes, via `skills/trove`                                     | Yes                      | No                                         | No                                   |
+| Runtime dependency      | None installed; the bridge adds catalog host and GitHub     | PostHog uptime           | None after install                         | None after install                   |
 
 ## What the catalog tells you before you commit
 
-|                   | Trove                               | PostHog | Tessl                           | skills.sh                     |
-| ----------------- | ----------------------------------- | ------- | ------------------------------- | ----------------------------- |
-| Does it work      | Planned                             | —       | Quality rubric and a judged A/B | —                             |
-| Is it safe        | Planned                             | —       | Snyk score and install policies | "Read them before installing" |
-| What does it cost | **Tokens, always-on and on invoke** | —       | —                               | —                             |
-| Does it fire      | Planned                             | —       | —                               | Install counts                |
+|                   | Trove                           | PostHog | Tessl                           | skills.sh                     |
+| ----------------- | ------------------------------- | ------- | ------------------------------- | ----------------------------- |
+| Does it work      | Planned                         | —       | Quality rubric and a judged A/B | —                             |
+| Is it safe        | Planned                         | —       | Snyk score and install policies | "Read them before installing" |
+| What does it cost | Tokens, always-on and on invoke | —       | —                               | —                             |
+| Does it fire      | Planned                         | —       | —                               | —                             |
 
-Tessl measures behavior; the other three do not.
+Tessl measures behavior; the other three publish no behavior measurement.
 `tessl scenario generate` builds validated scenarios, the agent solves each one
 twice — once without the skill and once with it — and a judge scores both
 against a per-scenario rubric. The published example reads 71% to 92%. The
@@ -42,9 +42,11 @@ it as unverified.
 
 ## Context cost
 
-Claude Code caps skill metadata at `skillListingBudgetFraction`, 1% of the
-context window by default, and drops descriptions that overflow it. Every skill
-installed spends part of that budget in every session, whether or not it fires.
+Claude Code budgets the skill listing at `skillListingBudgetFraction`, 1% of
+the model's context window by default, and caps each entry at 1,536 characters
+(`skillListingMaxDescChars`). Names always survive; when the listing overflows,
+descriptions drop, least-invoked first. Every skill installed spends part of
+that budget in every session, whether or not it fires.
 
 Measured with `trove`'s own estimator:
 
@@ -57,8 +59,8 @@ Measured with `trove`'s own estimator:
 Both bridges front a whole registry for the price of one skill. PostHog's runs
 against a database and puts the store's uptime in the path of every session that
 fires a skill; Trove's resolves raw git at a pinned sha and needs no server.
-Tessl and skills.sh have no bridge, so every skill installed keeps its always-on
-slice.
+Tessl and skills.sh document no read-without-install mode, so every skill
+installed there keeps its always-on slice.
 
 ## What Trove lacks
 
@@ -75,5 +77,5 @@ scan. Trove's eval and security items are unstarted.
   [skills-store SKILL.md](https://github.com/PostHog/ai-plugin/blob/main/skills/skills-store/SKILL.md)
 - [Vercel on Agent Skills](https://vercel.com/kb/guide/agent-skills-creating-installing-and-sharing-reusable-agent-context),
   [skills.sh: npm for Agent Skills](https://dev.to/stevengonsalvez/skillssh-npm-for-agent-skills-35jc)
-- [Claude Code's skill listing budget](https://claudefa.st/blog/guide/mechanics/skill-listing-budget)
+- [Claude Code skills, on the listing budget](https://code.claude.com/docs/en/skills)
 - [Agent Skills specification](https://agentskills.io/specification)
