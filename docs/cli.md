@@ -92,6 +92,16 @@ Defaults to port 8787. The handler sends no-cache headers and ignores
 conditional requests, so a rebuild shows up on reload. It refuses a port that is
 already serving.
 
+`serve` also answers `/body/<source>/<path>` from that source's checkout on
+disk, which is how the `skills/trove` bridge reads a skill whose source git does
+not serve publicly. It reads the routes from `--bundle`, so a source needs a
+`local:` path to get one, and a bundle it cannot read serves the site alone. A
+request cannot climb out of the checkout it names.
+
+```bash
+curl http://127.0.0.1:8787/body/drafts/skills/craft/tidy/SKILL.md
+```
+
 Recipes: `just serve`, `just open`, `just stop`.
 
 ## drift

@@ -40,9 +40,11 @@ and reaching sources git does not serve publicly.
 - [x] **Price the bridge.** The bridge costs 111 tokens always-on. Installing
       every plugin in the published registry costs 7,853 across 62 skills. Break-even
       is two skills.
-- [ ] **Serve the bodies the bridge points at.** Raw GitHub URLs work for public
-      sources and nothing else. A private source needs a fetching endpoint,
-      which puts availability back in the path.
+- [x] **Serve the bodies the bridge points at.** `sources[].body` names one base
+      per source: raw git at the pinned sha for a public GitHub source, and
+      `body/<source>/` for everything else, which `trove serve` answers from the
+      checkout on disk. A source with no checkout and no public pin still has
+      nowhere to resolve from, so a private remote needs a fetching endpoint.
 
 ## Security and governance
 

@@ -37,7 +37,28 @@ Binding at every level:
 ```bash
 CATALOG=${TROVE_CATALOG:-out/catalog.json}
 catalog() { case "$CATALOG" in http*) curl -sf "$CATALOG";; *) cat "$CATALOG";; esac; }
+
+get() { # get <skill> [file within the skill]
+  local base local_ rel
+  { read -r base; read -r local_; read -r rel; } < <(
+    catalog | jq -r --arg n "$1" --arg f "${2:-SKILL.md}" '
+      . as $c | $c.skills[] | select(.name == $n) | $c.sources[.source] as $src
+      | ($src.body // ""), ($src.local // ""), "\(.path)/\($f)"')
+  case "$base" in
+    https://*) curl -sf "$base$rel" ;;
+    body/*)
+      case "$CATALOG" in
+        http*) curl -sf "${CATALOG%/*}/$base$rel" ;;
+        *) cat "$local_/$rel" ;;
+      esac ;;
+    *) echo "no body for $1: the source is neither pinned nor on disk" >&2; return 1 ;;
+  esac
+}
 ```
+
+`sources[].body` is where a source's files resolve from. A pinned GitHub source
+gives a raw URL at that commit, which needs no server. Anything else gives
+`body/<source>/`, which `trove serve` answers from the checkout on disk.
 
 ## Level 1 — list
 
@@ -64,30 +85,32 @@ default, so an always-on total is a budget, not a curiosity.
 
 ## Level 2 — get one body
 
-Resolve the raw URL at the pinned sha, then fetch it:
-
 ```bash
-url() { catalog | jq -r --arg n "$1" --arg f "${2:-SKILL.md}" '
-  . as $c
-  | $c.skills[] | select(.name == $n)
-  | $c.sources[.source] as $src
-  | (($src.path // "") | if . == "" then "" else . + "/" end) as $prefix
-  | ($src.url | sub("^https://github.com/"; "") | sub("\\.git$"; "")) as $repo
-  | "https://raw.githubusercontent.com/\($repo)/\($src.sha)/\($prefix)\(.path)/\($f)"'; }
-
-curl -sf "$(url zoom-out)"
+get zoom-out
 ```
 
-Read the body and follow it as instructions for the task. A source whose `url`
-is not GitHub resolves the same way from a clone at `sha`.
+Read the body and follow it as instructions for the task.
 
 ## Level 3 — get one bundled file
 
 Only when the body referenced it, and only that path:
 
 ```bash
-curl -sf "$(url research references/patterns.md)"
+get research references/patterns.md
 ```
+
+## Reading a source that git does not serve
+
+A source with no pin, or one behind a host that serves no raw URL, resolves to
+`body/<source>/`. Point the catalog at a running server and `get` follows it:
+
+```bash
+trove serve                                        # in the registry checkout
+CATALOG=http://127.0.0.1:8787/catalog.json get trove
+```
+
+With a catalog read from a file instead, `get` falls back to `sources[].local`
+and reads the checkout directly.
 
 ## Installing instead
 

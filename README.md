@@ -193,18 +193,35 @@ it opens instead of for what exists. It costs 111 tokens always-on against the
 7,853 that installing every plugin in the registry this repo publishes costs
 across its 62 skills.
 
-The bridge needs no server. `catalog.json` carries a `sources` block naming each
-source's url and pinned sha, so a skill's body resolves to a raw git URL at an
-immutable commit:
+`catalog.json` carries a `sources` block, and each source names a `body` base a
+skill's files resolve from, joined with `<skill path>/<file>`:
 
 ```bash
-jq -r --arg n zoom-out '
-  . as $c | $c.skills[] | select(.name == $n)
-  | $c.sources[.source] as $src
-  | ($src.url | sub("^https://github.com/"; "") | sub("\\.git$"; "")) as $repo
-  | "https://raw.githubusercontent.com/\($repo)/\($src.sha)/\(.path)/SKILL.md"
-' out/catalog.json
+jq -r '.sources' out/catalog.json
 ```
+
+```json
+{
+  "skills": {
+    "source": "url",
+    "url": "https://github.com/tslateman/skills.git",
+    "sha": "99bddb79...",
+    "body": "https://raw.githubusercontent.com/tslateman/skills/99bddb79.../"
+  },
+  "drafts": {
+    "body": "body/drafts/",
+    "local": "/Users/you/dev/drafts"
+  }
+}
+```
+
+A pinned GitHub source resolves to raw git at that commit, so the published
+bridge needs no server: a session depends on the host of the catalog and on
+GitHub. Every other source resolves to `body/<source>/`, which `trove serve`
+answers from the checkout on disk. That covers a source before it is pushed, one
+with no pin, and one behind a host that serves no raw URL. Reading through
+`body/` puts the server in the path, which is why a published source never
+routes that way.
 
 The skill states its disclosure contract outright: descriptions to choose, one
 body once chosen, one file when the body names it.

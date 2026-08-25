@@ -188,11 +188,10 @@ def test_skills_no_plugin_ships_are_reported_as_orphans(tmp_path):
 def test_catalog_carries_the_source_a_skill_body_resolves_from(tmp_path):
     from trove.catalog import build_catalog
 
-    catalog = build_catalog(load_bundle(_bundle_with_curated_plugin(tmp_path)))
-    assert catalog["sources"]["s"] == {
-        "source": "url",
-        "url": "https://github.com/o/s.git",
-    }
+    bundle = load_bundle(_bundle_with_curated_plugin(tmp_path))
+    entry = build_catalog(bundle)["sources"]["s"]
+    assert entry["source"] == "url"
+    assert entry["url"] == "https://github.com/o/s.git"
 
 
 def test_curated_plugin_tags_reach_only_the_skills_it_selects(tmp_path):
@@ -429,13 +428,16 @@ def test_build_refuses_a_plugin_with_no_description_anywhere(tmp_path):
         plugin_entry(PluginSpec(name="p", source_key="s"), Source(key="s", repo="o/s"), sha=None)
 
 
-def _serve(directory: Path):
+def _serve(directory: Path, roots: dict | None = None):
     from functools import partial
     from http.server import ThreadingHTTPServer
     import threading
     from trove.cli import PreviewHandler
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), partial(PreviewHandler, directory=str(directory)))
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        partial(PreviewHandler, directory=str(directory), roots=roots or {}),
+    )
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server
 
@@ -805,3 +807,185 @@ def test_a_qualified_annotated_tag_peels_to_its_commit(tmp_path):
     ).stdout.strip()
     for ref in ("refs/tags/release", "refs/heads/release"):
         assert resolve_sha(Source(key="s", url=str(work), ref=ref)) == commit
+
+
+# --- resolving a skill body ---
+
+
+def _source(tmp_path: Path, **kwargs) -> Source:
+    return Source(key=kwargs.pop("key", "s"), **kwargs)
+
+
+def test_a_pinned_github_source_resolves_to_raw_git_at_that_commit():
+    from trove.catalog import body_base
+
+    source = Source(key="s", repo="o/s")
+    assert body_base("s", source, "abc123") == (
+        "https://raw.githubusercontent.com/o/s/abc123/"
+    )
+
+
+def test_a_subdir_source_carries_its_prefix_into_the_body_base():
+    from trove.catalog import body_base
+
+    source = Source(key="s", repo="o/s", path="tooling/plugin")
+    assert body_base("s", source, "abc123").endswith("/abc123/tooling/plugin/")
+
+
+def test_an_unpinned_source_falls_back_to_the_serve_route(tmp_path):
+    from trove.catalog import body_base
+
+    assert body_base("s", Source(key="s", repo="o/s", local=tmp_path), None) == "body/s/"
+
+
+def test_a_source_git_does_not_serve_publicly_falls_back_to_the_serve_route(tmp_path):
+    from trove.catalog import body_base
+
+    source = Source(key="s", url="https://git.example.com/o/s.git", local=tmp_path)
+    assert body_base("s", source, "abc123") == "body/s/"
+
+
+def test_a_source_with_nothing_on_disk_and_no_pin_resolves_nowhere():
+    from trove.catalog import body_base
+
+    assert body_base("s", Source(key="s", repo="o/s"), None) is None
+
+
+def test_a_local_only_source_carries_both_its_route_and_its_path(tmp_path):
+    from trove.catalog import source_entry
+
+    entry = source_entry("s", Source(key="s", local=tmp_path), None)
+    assert entry == {"body": "body/s/", "local": str(tmp_path)}
+
+
+def test_a_published_source_keeps_its_local_path_out_of_the_catalog(tmp_path):
+    from trove.catalog import source_entry
+
+    entry = source_entry("s", Source(key="s", repo="o/s", local=tmp_path), "abc123")
+    assert "local" not in entry
+    assert entry["body"].startswith("https://raw.githubusercontent.com/")
+
+
+# --- serving a body from the checkout on disk ---
+
+
+def _served_body(tmp_path: Path):
+    checkout = tmp_path / "checkout"
+    skill = checkout / "skills" / "craft" / "tidy"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("---\nname: tidy\ndescription: d\n---\nbody\n")
+    (skill / "references").mkdir()
+    (skill / "references" / "notes.md").write_text("# notes\n")
+    site = tmp_path / "site"
+    site.mkdir()
+    (site / "index.html").write_text("<p>catalog</p>")
+    (tmp_path / "secret").write_text("do not serve me")
+    return site, checkout
+
+
+def test_serve_answers_a_body_from_the_sources_checkout(tmp_path):
+    from urllib.request import urlopen
+
+    site, checkout = _served_body(tmp_path)
+    server = _serve(site, {"s": checkout})
+    try:
+        port = server.server_address[1]
+        url = f"http://127.0.0.1:{port}/body/s/skills/craft/tidy/SKILL.md"
+        with urlopen(url) as response:
+            assert b"name: tidy" in response.read()
+    finally:
+        server.shutdown()
+
+
+def test_serve_answers_a_bundled_file_from_the_same_route(tmp_path):
+    from urllib.request import urlopen
+
+    site, checkout = _served_body(tmp_path)
+    server = _serve(site, {"s": checkout})
+    try:
+        port = server.server_address[1]
+        url = f"http://127.0.0.1:{port}/body/s/skills/craft/tidy/references/notes.md"
+        with urlopen(url) as response:
+            assert response.read() == b"# notes\n"
+    finally:
+        server.shutdown()
+
+
+@pytest.mark.parametrize(
+    "attack",
+    [
+        "/body/s/../secret",
+        "/body/s/../../secret",
+        "/body/s/%2e%2e/secret",
+        "/body/s/skills/../../secret",
+    ],
+)
+def test_serve_refuses_to_climb_out_of_a_sources_checkout(tmp_path, attack):
+    from urllib.error import HTTPError
+    from urllib.request import urlopen
+
+    site, checkout = _served_body(tmp_path)
+    server = _serve(site, {"s": checkout})
+    try:
+        port = server.server_address[1]
+        with pytest.raises(HTTPError) as caught:
+            urlopen(f"http://127.0.0.1:{port}{attack}")
+        assert caught.value.code == 404
+    finally:
+        server.shutdown()
+
+
+def test_serve_does_not_invent_a_route_for_an_unknown_source(tmp_path):
+    from urllib.error import HTTPError
+    from urllib.request import urlopen
+
+    site, checkout = _served_body(tmp_path)
+    server = _serve(site, {"s": checkout})
+    try:
+        port = server.server_address[1]
+        with pytest.raises(HTTPError) as caught:
+            urlopen(f"http://127.0.0.1:{port}/body/other/skills/craft/tidy/SKILL.md")
+        assert caught.value.code == 404
+    finally:
+        server.shutdown()
+
+
+def test_body_roots_names_every_checkout_that_is_on_disk(tmp_path):
+    from trove.cli import body_roots
+
+    checkout = tmp_path / "repo"
+    (checkout / "skills").mkdir(parents=True)
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\nsources:\n"
+        f"  here: {{repo: o/s, local: {checkout}}}\n"
+        f"  gone: {{repo: o/g}}\n"
+        "plugins:\n  - {name: p, source: here, description: d}\n"
+    )
+    assert body_roots(bundle) == {"here": checkout}
+
+
+def test_body_roots_is_empty_when_there_is_no_bundle_to_read(tmp_path):
+    from trove.cli import body_roots
+
+    assert body_roots(tmp_path / "absent.yaml") == {}
+
+
+def test_a_source_the_catalog_cannot_reach_costs_a_pin_not_the_run(tmp_path):
+    from trove.catalog import build_catalog
+    from trove.fetch import Workspace
+
+    repo = tmp_path / "repo" / "skills" / "craft" / "tidy"
+    repo.mkdir(parents=True)
+    (repo / "SKILL.md").write_text("---\nname: tidy\ndescription: d\n---\nbody\n")
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        f"name: t\nsources:\n  s: {{url: {tmp_path / 'nowhere.git'}, local: {tmp_path / 'repo'}}}\n"
+        "plugins:\n  - {name: p, source: s, description: d}\n"
+    )
+    workspace = Workspace(cache=tmp_path / "cache")
+    catalog = build_catalog(load_bundle(bundle), workspace=workspace)
+
+    assert [s["name"] for s in catalog["skills"]] == ["tidy"]
+    assert catalog["sources"]["s"]["body"] == "body/s/"
+    assert any("cannot reach" in note for note in workspace.notes)

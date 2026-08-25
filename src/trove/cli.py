@@ -9,6 +9,7 @@ import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from functools import partial
 from pathlib import Path
+from urllib.parse import unquote
 
 from .build import build_marketplace, dumps
 from .catalog import build_catalog
@@ -186,8 +187,33 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
     return 0
 
 
+BODY_PREFIX = "/body/"
+
+
 class PreviewHandler(SimpleHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+
+    def __init__(self, *args, roots: dict[str, Path] | None = None, **kwargs):
+        self.roots = roots or {}
+        super().__init__(*args, **kwargs)
+
+    def translate_path(self, path: str) -> str:
+        """Answer `/body/<source>/<rest>` from that source's checkout.
+
+        The rest of the path goes through the base class against a swapped
+        directory, so its traversal defenses apply unchanged.
+        """
+        clean = path.split("?", 1)[0].split("#", 1)[0]
+        if clean.startswith(BODY_PREFIX):
+            key, _, rest = clean[len(BODY_PREFIX) :].partition("/")
+            root = self.roots.get(unquote(key))
+            if root is not None:
+                served, self.directory = self.directory, str(root)
+                try:
+                    return super().translate_path("/" + rest)
+                finally:
+                    self.directory = served
+        return super().translate_path(path)
 
     def send_head(self):
         del self.headers["If-Modified-Since"]
@@ -198,10 +224,22 @@ class PreviewHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
 
+def body_roots(path: Path) -> dict[str, Path]:
+    """Checkouts `serve` answers `/body/` from. A bundle it cannot read serves none."""
+    if not path.exists():
+        return {}
+    return {
+        key: source.local
+        for key, source in load_bundle(path).sources.items()
+        if source.local is not None and source.local.exists()
+    }
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     if not (args.out / "index.html").exists():
         raise RuntimeError(f"{args.out} has no index.html — run `trove catalog` first")
-    handler = partial(PreviewHandler, directory=str(args.out))
+    roots = body_roots(args.bundle)
+    handler = partial(PreviewHandler, directory=str(args.out), roots=roots)
     try:
         server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
     except OSError as exc:
@@ -210,6 +248,8 @@ def cmd_serve(args: argparse.Namespace) -> int:
             "there; stop it or choose another port"
         ) from exc
     print(f"serving {args.out.resolve()} at http://127.0.0.1:{args.port}")
+    for key, root in sorted(roots.items()):
+        print(f"  /body/{key}/ -> {root}")
     server.serve_forever()
     return 0
 
