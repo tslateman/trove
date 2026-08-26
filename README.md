@@ -153,6 +153,14 @@ file only if the body sends it there.
 The bundled number is a ceiling, written `≤`: it assumes the skill reads every
 file it ships, which a skill that branches over its references never does.
 
+An always-on total is a ceiling too. Claude Code caps the whole skill listing at
+`skillListingBudgetFraction` of the context window, 1% by default, and truncates
+each description at `skillListingMaxDescChars`, 1,536 by default. Past the cap a
+skill still lists, without its description, so the marginal cost of the next
+install falls to a name. Which skills keep their descriptions depends on every
+skill installed, not on one plugin, so no per-plugin figure survives contact
+with a full session unchanged.
+
 Constants were fit by least squares against `claude plugin details` over 55
 skills. `trove calibrate` re-runs that comparison and prints the error.
 

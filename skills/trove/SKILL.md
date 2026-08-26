@@ -74,7 +74,7 @@ catalog | jq -r --arg q 'refactor' '
 What the registry holds, by plugin:
 
 ```bash
-catalog | jq -r '.plugins[] | "\(.name)\t\(.skills) skills\t\(.description)"'
+catalog | jq -r '.plugins[] | "\(.name)\t\(.skills) skills\t+\(.tokensAlwaysOn) tok\t\(.description)"'
 catalog | jq -r '.totals | "\(.skills) skills, \(.alwaysOn) tok always-on"'
 ```
 

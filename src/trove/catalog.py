@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .fetch import Workspace
-from .models import Bundle, Source
+from .models import Bundle, PluginSpec, Source
 from .resolve import effective, source_manifest
 from .scan import scan_source
 
@@ -59,6 +59,26 @@ def resolve_pins(bundle: Bundle, workspace: Workspace) -> dict[str, str]:
     return pins
 
 
+def plugin_entry(spec: PluginSpec, resolved: dict, shipped: list[dict]) -> dict:
+    """Describe one plugin, priced by the skills it ships.
+
+    `tokensAlwaysOn` sums only what every session pays. A body and a bundled
+    file are charged on demand, so neither belongs in an install-time total.
+    """
+    return {
+        "name": spec.name,
+        "description": resolved["description"],
+        "version": resolved["version"],
+        "category": spec.category,
+        "tags": spec.tags,
+        "homepage": resolved["homepage"],
+        "source": spec.source_key,
+        "curated": bool(spec.skills),
+        "skills": len(shipped),
+        "tokensAlwaysOn": sum(r["tokensAlwaysOn"] for r in shipped),
+    }
+
+
 def build_catalog(bundle: Bundle, workspace: Workspace | None = None) -> dict:
     workspace = workspace if workspace is not None else Workspace()
     roots = {key: workspace.root(source) for key, source in bundle.sources.items()}
@@ -111,17 +131,7 @@ def build_catalog(bundle: Bundle, workspace: Workspace | None = None) -> dict:
             for key, source in bundle.sources.items()
         },
         "plugins": [
-            {
-                "name": spec.name,
-                "description": resolved[spec.name]["description"],
-                "version": resolved[spec.name]["version"],
-                "category": spec.category,
-                "tags": spec.tags,
-                "homepage": resolved[spec.name]["homepage"],
-                "source": spec.source_key,
-                "curated": bool(spec.skills),
-                "skills": sum(1 for r in records if spec.name in r["plugins"]),
-            }
+            plugin_entry(spec, resolved[spec.name], [r for r in records if spec.name in r["plugins"]])
             for spec in bundle.plugins
         ],
         "skills": records,
