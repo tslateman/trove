@@ -215,5 +215,4 @@ uv run --with playwright playwright install chromium
 uv tool install shot-scraper && shot-scraper install
 ```
 
-It writes `out/demo.mp4` by default; `just demo docs/demo.mp4` publishes over
-the recording the README shows.
+It writes `out/demo.mp4` by default; pass a path to write elsewhere.

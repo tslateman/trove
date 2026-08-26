@@ -4,20 +4,11 @@ A registry for Claude Code skills. Author skills in whatever repo owns them,
 compose them into bundles, publish a marketplace, and browse the catalog with
 token cost on every card.
 
-Every installed skill spends context in every session before it fires. Trove
-makes that price visible at the moment you decide to install.
-
 ![Filtering the catalog to one category, picking three skills, and copying the bundle they generate](docs/demo.gif)
 
-Fourteen seconds: filter to a category, pick three skills, watch the always-on
-total move against a 5,000-token budget, and copy the bundle YAML they compose.
-[The mp4](docs/demo.mp4) is the same run at full resolution, and `just demo`
-records it again from `scripts/demo.yml`.
-
-New here? Start with the [getting started guide](docs/getting-started.md). For
-every command and flag, see the [CLI reference](docs/cli.md). When something
-fails, [troubleshooting](docs/troubleshooting.md) lists the messages and what
-they mean.
+New here? Start with the [getting started guide](docs/getting-started.md).
+For every command and flag, see the [CLI reference](docs/cli.md).
+When something fails, [troubleshooting](docs/troubleshooting.md).
 
 ## Why
 
