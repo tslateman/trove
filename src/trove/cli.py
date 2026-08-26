@@ -52,8 +52,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
         total += always
         print(f"{key}: {len(skills)} skills, ~{always:,} tok always-on")
         if args.verbose:
+            print(f"  {'skill':<34} {'always':>5} {'fires':>7} {'bundled':>9}  path")
             for s in skills:
-                bundled = f"+{s.bundled_files}f {s.tokens_bundled}" if s.bundled_files else ""
+                bundled = f"{s.bundled_files}f ≤{s.tokens_bundled_max}" if s.bundled_files else ""
                 print(
                     f"  {s.name:<34} {s.tokens_always_on:>5} {s.tokens_on_invoke:>7} "
                     f"{bundled:>9}  {s.rel_path}"

@@ -373,9 +373,9 @@ def test_bundled_files_reach_the_estimate(tmp_path):
     (d / "scripts" / "run.py").write_text("y" * 292)
     skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
     assert skill.bundled_files == 2
-    assert skill.tokens_bundled == pytest.approx(200, abs=2)
+    assert skill.tokens_bundled_max == pytest.approx(200, abs=2)
     assert skill.to_dict()["bundledFiles"] == 2
-    assert skill.to_dict()["tokensBundled"] == skill.tokens_bundled
+    assert skill.to_dict()["tokensBundledMax"] == skill.tokens_bundled_max
 
 
 def test_a_binary_counts_as_a_file_but_prices_as_nothing(tmp_path):
@@ -386,7 +386,7 @@ def test_a_binary_counts_as_a_file_but_prices_as_nothing(tmp_path):
     (d / ".hidden").write_text("never ships")
     skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
     assert skill.bundled_files == 1
-    assert skill.tokens_bundled == 0
+    assert skill.tokens_bundled_max == 0
 
 
 def test_a_bare_skill_bundles_nothing(tmp_path):
@@ -395,7 +395,7 @@ def test_a_bare_skill_bundles_nothing(tmp_path):
     (d / "SKILL.md").write_text("---\nname: bare\ndescription: d\n---\nbody\n")
     skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
     assert skill.bundled_files == 0
-    assert skill.tokens_bundled == 0
+    assert skill.tokens_bundled_max == 0
 
 
 def test_tolerant_parser_still_wins_when_strict_yaml_fails(tmp_path):

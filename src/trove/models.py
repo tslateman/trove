@@ -60,7 +60,7 @@ class Skill:
         return round(self.body_chars / CHARS_PER_TOKEN_BODY + BODY_OVERHEAD)
 
     @property
-    def tokens_bundled(self) -> int:
+    def tokens_bundled_max(self) -> int:
         return round(self.bundled_chars / CHARS_PER_TOKEN_BODY)
 
     @property
@@ -77,7 +77,7 @@ class Skill:
             "tokensAlwaysOn": self.tokens_always_on,
             "tokensOnInvoke": self.tokens_on_invoke,
             "bundledFiles": self.bundled_files,
-            "tokensBundled": self.tokens_bundled,
+            "tokensBundledMax": self.tokens_bundled_max,
             "lint": self.lint,
         }
 

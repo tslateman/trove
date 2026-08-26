@@ -101,6 +101,8 @@ aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh -
 .pill.inv { background: transparent; }
 .pill.ver { font-weight: 600; color: var(--ink); }
 .pill.lint { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.legend { margin: 0 0 14px; font-size: 12px; color: var(--muted); }
+.legend b { color: var(--ok); font-weight: 600; }
 .pick {
   position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 6px;
   border: 1px solid var(--line); background: var(--bg); color: transparent; cursor: pointer;
@@ -160,6 +162,8 @@ aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh -
       <button id="t-skills" aria-pressed="true">Skills</button>
       <button id="t-plugins" aria-pressed="false">Plugins</button>
     </div>
+    <p class="legend" id="legend">Only <b>always-on</b> is charged every session. A body loads
+      when the skill fires, and a bundled file only if the body sends it there.</p>
     <div class="grid" id="grid"></div>
     <div class="empty" id="empty" hidden>Nothing matches.</div>
   </section>
@@ -214,6 +218,7 @@ function setView(v) {
   state.view = v;
   $("t-skills").setAttribute("aria-pressed", v === "skills");
   $("t-plugins").setAttribute("aria-pressed", v === "plugins");
+  $("legend").hidden = v !== "skills";
   render();
 }
 
@@ -261,9 +266,9 @@ function render() {
     card.className = "card" + (state.view === "skills" && state.picked.has(skillKey(r)) ? " picked" : "");
     const meta = state.view === "skills"
       ? `<span class="pill cat">${escapeHtml(r.category)}</span>
-         <span class="pill tok">+${r.tokensAlwaysOn} always-on</span>
-         <span class="pill inv">${(r.tokensOnInvoke / 1000).toFixed(1)}k on invoke</span>
-         ${r.bundledFiles ? `<span class="pill inv">+${r.bundledFiles} file${r.bundledFiles === 1 ? "" : "s"} · ${(r.tokensBundled / 1000).toFixed(1)}k</span>` : ""}
+         <span class="pill tok" title="Name and description, in the prompt every session whether or not the skill fires">+${r.tokensAlwaysOn} always-on</span>
+         <span class="pill inv" title="The SKILL.md body, read only when the skill fires">${(r.tokensOnInvoke / 1000).toFixed(1)}k when it fires</span>
+         ${r.bundledFiles ? `<span class="pill inv" title="Files beside SKILL.md, each read only if the body sends the skill to it">${r.bundledFiles} file${r.bundledFiles === 1 ? "" : "s"} · ≤${(r.tokensBundledMax / 1000).toFixed(1)}k if read</span>` : ""}
          ${r.lint.map(c => `<span class="pill lint">${escapeHtml(c)}</span>`).join("")}`
       : `<span class="pill cat">${escapeHtml(r.category || "—")}</span>
          ${r.version ? `<span class="pill ver">v${escapeHtml(r.version)}</span>` : ""}

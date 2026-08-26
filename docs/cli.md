@@ -35,9 +35,10 @@ skills: 56 skills, ~7,329 tok always-on
 total always-on: ~7,329 tok
 ```
 
-`--verbose` lists each skill with its always-on cost, its on-invoke cost, its
-bundled files with their cost when it ships any, and its path. Sources with
-nothing to index report on stderr and do not stop the run.
+`--verbose` lists each skill under a header row: what it charges every session,
+what its body charges when it fires, the files it bundles with the ceiling they
+would add if all were read, and its path. Sources with nothing to index report
+on stderr and do not stop the run.
 
 Recipes: `just scan`, `just scan-all`.
 

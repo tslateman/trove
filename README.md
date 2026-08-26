@@ -140,13 +140,18 @@ bundle value would then be a guess.
 
 ## Token estimates
 
-`scan` and `catalog` report three numbers per skill:
+`scan` and `catalog` report three numbers per skill. Only the first is charged
+unconditionally; Claude Code loads a body when the skill fires and a bundled
+file only if the body sends it there.
 
-| Number    | Meaning                                               |
-| --------- | ----------------------------------------------------- |
-| always-on | name + description, paid in every session             |
-| on invoke | the SKILL.md body, paid each time the skill fires     |
-| bundled   | files beside SKILL.md, paid when the skill reads them |
+| Number        | What it covers            | When it is charged          |
+| ------------- | ------------------------- | --------------------------- |
+| always-on     | name and description      | every session, fired or not |
+| when it fires | the SKILL.md body         | each time the skill fires   |
+| bundled       | the files beside SKILL.md | per file, only when read    |
+
+The bundled number is a ceiling, written `≤`: it assumes the skill reads every
+file it ships, which a skill that branches over its references never does.
 
 Constants were fit by least squares against `claude plugin details` over 55
 skills. `trove calibrate` re-runs that comparison and prints the error.
@@ -159,10 +164,9 @@ skills. `trove calibrate` re-runs that comparison and prints the error.
 Re-run `calibrate` when Claude Code changes how it counts; the constants live in
 `src/trove/models.py`.
 
-The bundled estimate reuses the on-invoke ratio and is not calibrated:
-`claude plugin details` prices what Claude Code preloads, and bundled files
-load only when the skill reads them. A binary counts as a file and contributes
-nothing.
+The bundled ceiling reuses the on-invoke ratio and is not calibrated, because
+`claude plugin details` prices what Claude Code preloads and a bundled file is
+never preloaded. A binary counts as a file and contributes nothing.
 
 ## Fetching
 

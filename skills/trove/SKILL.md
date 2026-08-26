@@ -99,6 +99,11 @@ Only when the body referenced it, and only that path:
 get research references/patterns.md
 ```
 
+`bundledFiles` counts what a skill ships beside `SKILL.md` and
+`tokensBundledMax` prices them all at once. Treat it as a ceiling: it is what
+the skill would cost if it read every file, and a skill that branches over its
+references reads one.
+
 ## Reading a source that git does not serve
 
 A source with no pin, or one behind a host that serves no raw URL, resolves to
