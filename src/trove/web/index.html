@@ -162,7 +162,8 @@ aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh -
       <button id="t-skills" aria-pressed="true">Skills</button>
       <button id="t-plugins" aria-pressed="false">Plugins</button>
     </div>
-    <p class="legend" id="legend"></p>
+    <p class="legend" id="legend">Only <b>always-on</b> is charged every session. A body loads
+      when the skill fires, and a bundled file only if the body sends it there.</p>
     <div class="grid" id="grid"></div>
     <div class="empty" id="empty" hidden>Nothing matches.</div>
   </section>
@@ -187,14 +188,6 @@ const state = { data: null, q: "", cat: null, plug: null, flag: null, view: "ski
 const $ = (id) => document.getElementById(id);
 // Two sources can ship the same skill name, so a pick is keyed by both.
 const skillKey = (s) => s.source + ":" + s.path;
-
-const LEGEND = {
-  skills: `Only <b>always-on</b> is charged every session. A body loads when the skill fires,
-    and a bundled file only if the body sends it there.`,
-  plugins: `Installing adds a plugin's <b>always-on</b> total to every session, up to Claude Code's
-    skill-listing budget — 1% of the context window by default. Past that cap a skill still lists,
-    without its description, so a total is a ceiling rather than a promise.`,
-};
 
 fetch("catalog.json").then(r => r.json()).then(d => { state.data = d; boot(); });
 
@@ -225,6 +218,7 @@ function setView(v) {
   state.view = v;
   $("t-skills").setAttribute("aria-pressed", v === "skills");
   $("t-plugins").setAttribute("aria-pressed", v === "plugins");
+  $("legend").hidden = v !== "skills";
   render();
 }
 
@@ -263,7 +257,6 @@ function render() {
   ], "flag");
 
   const grid = $("grid");
-  $("legend").innerHTML = LEGEND[state.view];
   grid.innerHTML = "";
   const rows = state.view === "skills" ? skills.filter(matches) : state.data.plugins;
   $("empty").hidden = rows.length > 0;
@@ -280,8 +273,7 @@ function render() {
       : `<span class="pill cat">${escapeHtml(r.category || "—")}</span>
          ${r.version ? `<span class="pill ver">v${escapeHtml(r.version)}</span>` : ""}
          ${r.skills != null ? `<span class="pill">${r.skills} skill${r.skills === 1 ? "" : "s"}</span>` : ""}
-         ${r.tokensAlwaysOn ? `<span class="pill tok" title="Its skills' names and descriptions, charged every session — capped by the skill-listing budget">+${r.tokensAlwaysOn.toLocaleString()} always-on</span>` : ""}
-         ${r.curated ? '<span class="pill ver">curated</span>' : ""}
+         ${r.curated ? '<span class="pill tok">curated</span>' : ""}
          ${(r.tags || []).slice(0, 3).map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("")}`;
     card.innerHTML = `
       ${state.view === "skills" ? '<button class="pick">✓</button>' : ""}
