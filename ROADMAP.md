@@ -31,8 +31,10 @@ a session reaching a skill through the bridge depends on the host of the catalog
 and on GitHub, never on a Trove process. What remains is publishing the catalog
 and reaching sources git does not serve publicly.
 
-- [ ] **Publish the catalog.** A CI job that runs `just dist` and deploys `out/`.
-      `claude plugin marketplace add <url>` already consumes what it writes.
+- [x] **Publish the catalog.** `publish.yml` rebuilds `out/` on every push to
+      main and deploys it to GitHub Pages. It reads `bundles/registry.yaml`
+      when the repo carries one and falls back to the demo bundle, so the
+      pipeline runs before a public bundle exists.
 - [x] **Read surface over the index.** `skills/trove` answers list, get, and
       file-get from `catalog.json` plus the `sources` block, which now carries
       each source's url and pinned sha. Git hosts the immutable content, so the
@@ -80,8 +82,9 @@ sees two sources shipping the same capability, and nothing reports age.
 - [ ] **Staleness signal.** Surface last-changed date per skill and flag a
       source whose upstream has moved past its pin.
 
-Related: the stack-picker collision under Known gaps is the same problem
-surfacing as a bug.
+The stack-picker collision under Known gaps was this problem surfacing as a
+bug; the picker now keys by source, but the redundancy it exposed remains
+unmeasured.
 
 ## Known gaps
 
@@ -91,7 +94,7 @@ Documented in the README under Known limits; repeated here as work.
       skills.
 - [x] Catalog a source that has only a remote. Sources are fetched and cached by
       commit sha, so a bundle indexes the same everywhere, CI included.
-- [ ] Count a skill's bundled files. Only `SKILL.md` reaches the estimate, so a
-      skill carrying `references/` and `scripts/` prices as if it were bare.
-- [ ] Key the stack picker by source and name. Two sources shipping the same
-      skill name currently collapse into one entry.
+- [x] Count a skill's bundled files. The card and `scan --verbose` now price
+      the files beside `SKILL.md`; a binary counts as a file and adds nothing.
+- [x] Key the stack picker by source and path. Two sources shipping the same
+      skill name pick independently, and the UI check proves it with twins.

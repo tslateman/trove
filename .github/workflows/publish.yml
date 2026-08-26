@@ -1,0 +1,45 @@
+name: publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --all-groups
+      # bundles/registry.yaml is the public bundle. Until one is committed,
+      # the demo bundle ships as a live preview of the catalog.
+      - name: Build the registry
+        run: |
+          if [ -f bundles/registry.yaml ]; then
+            uv run trove --bundle bundles/registry.yaml --out out build
+            uv run trove --bundle bundles/registry.yaml --out out catalog
+          else
+            uv run trove --bundle bundles/demo.yaml --out out build --no-pin
+            uv run trove --bundle bundles/demo.yaml --out out --offline catalog
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+      - id: deployment
+        uses: actions/deploy-pages@v4

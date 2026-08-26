@@ -59,6 +59,28 @@ def category_for(rel_path: str, source_key: str) -> str:
     return source_key
 
 
+def bundled(skill_dir: Path) -> tuple[int, int]:
+    """Count the files shipped beside SKILL.md and the chars of the text ones.
+
+    A binary ships but never loads as text, so it counts as a file and
+    contributes nothing to the estimate.
+    """
+    files = 0
+    chars = 0
+    for path in sorted(skill_dir.rglob("*")):
+        if not path.is_file() or path.name == "SKILL.md":
+            continue
+        rel = path.relative_to(skill_dir)
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        files += 1
+        try:
+            chars += len(path.read_text(encoding="utf-8"))
+        except UnicodeDecodeError:
+            continue
+    return files, chars
+
+
 def scan_source(source: Source, root: Path | None = None) -> list[Skill]:
     if root is None:
         if source.local is None:
@@ -73,6 +95,7 @@ def scan_source(source: Source, root: Path | None = None) -> list[Skill]:
         meta, body = read_metadata(text)
         name = meta.get("name") or skill_file.parent.name
         description = meta.get("description", "").strip()
+        files, chars = bundled(skill_file.parent)
         skills.append(
             Skill(
                 name=name,
@@ -83,6 +106,8 @@ def scan_source(source: Source, root: Path | None = None) -> list[Skill]:
                 body_chars=len(body),
                 frontmatter_chars=len(name) + len(description),
                 strict_yaml=strict_yaml_ok(text),
+                bundled_files=files,
+                bundled_chars=chars,
             )
         )
     return skills

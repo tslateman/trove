@@ -364,6 +364,40 @@ def test_single_quoted_yaml_escapes_are_decoded_not_passed_through(tmp_path):
     assert skill.description == "keeps a project's map honest: parallel readers"
 
 
+def test_bundled_files_reach_the_estimate(tmp_path):
+    d = tmp_path / "skills" / "c" / "kit"
+    (d / "references").mkdir(parents=True)
+    (d / "scripts").mkdir()
+    (d / "SKILL.md").write_text("---\nname: kit\ndescription: d\n---\nbody\n")
+    (d / "references" / "notes.md").write_text("x" * 292)
+    (d / "scripts" / "run.py").write_text("y" * 292)
+    skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
+    assert skill.bundled_files == 2
+    assert skill.tokens_bundled == pytest.approx(200, abs=2)
+    assert skill.to_dict()["bundledFiles"] == 2
+    assert skill.to_dict()["tokensBundled"] == skill.tokens_bundled
+
+
+def test_a_binary_counts_as_a_file_but_prices_as_nothing(tmp_path):
+    d = tmp_path / "skills" / "c" / "art"
+    (d / "assets").mkdir(parents=True)
+    (d / "SKILL.md").write_text("---\nname: art\ndescription: d\n---\nbody\n")
+    (d / "assets" / "logo.png").write_bytes(b"\x89PNG\xff\xfe\x00binary")
+    (d / ".hidden").write_text("never ships")
+    skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
+    assert skill.bundled_files == 1
+    assert skill.tokens_bundled == 0
+
+
+def test_a_bare_skill_bundles_nothing(tmp_path):
+    d = tmp_path / "skills" / "c" / "bare"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text("---\nname: bare\ndescription: d\n---\nbody\n")
+    skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
+    assert skill.bundled_files == 0
+    assert skill.tokens_bundled == 0
+
+
 def test_tolerant_parser_still_wins_when_strict_yaml_fails(tmp_path):
     d = tmp_path / "skills" / "c" / "loose"
     d.mkdir(parents=True)

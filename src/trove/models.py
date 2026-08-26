@@ -48,6 +48,8 @@ class Skill:
     body_chars: int
     frontmatter_chars: int
     strict_yaml: bool = True
+    bundled_files: int = 0
+    bundled_chars: int = 0
 
     @property
     def tokens_always_on(self) -> int:
@@ -56,6 +58,10 @@ class Skill:
     @property
     def tokens_on_invoke(self) -> int:
         return round(self.body_chars / CHARS_PER_TOKEN_BODY + BODY_OVERHEAD)
+
+    @property
+    def tokens_bundled(self) -> int:
+        return round(self.bundled_chars / CHARS_PER_TOKEN_BODY)
 
     @property
     def lint(self) -> list[str]:
@@ -70,6 +76,8 @@ class Skill:
             "category": self.category,
             "tokensAlwaysOn": self.tokens_always_on,
             "tokensOnInvoke": self.tokens_on_invoke,
+            "bundledFiles": self.bundled_files,
+            "tokensBundled": self.tokens_bundled,
             "lint": self.lint,
         }
 

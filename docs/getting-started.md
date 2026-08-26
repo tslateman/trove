@@ -149,6 +149,13 @@ one who installs next month get the same bytes until you rebuild.
 publish. Serve that directory from anywhere: GitHub Pages, an object store, or
 a static host.
 
+This repo ships the deploy step as
+[`.github/workflows/publish.yml`](../.github/workflows/publish.yml): every push
+to main rebuilds `out/` and deploys it to GitHub Pages, reading
+`bundles/registry.yaml` when one is committed and falling back to the demo
+bundle until then. To reuse it, copy the workflow, point it at your bundle, and
+enable Pages under Settings → Pages → Source: GitHub Actions.
+
 ## Step 5: Install
 
 ```bash

@@ -31,12 +31,34 @@ XSS_PROBE = """() => {
   const probe = '<img src=x onerror="window.__pwned=1">';
   state.data.skills.push({name: probe, description: probe, category: probe, tags: [probe],
     path: 'probe', source: 'probe', tokensAlwaysOn: 1, tokensOnInvoke: 1,
-    lint: [probe], plugins: ['probe']});
+    bundledFiles: 1, tokensBundled: 1, lint: [probe], plugins: ['probe']});
   render();
   const injected = document.querySelectorAll('.grid img, aside img').length;
   state.data.skills.pop();
   render();
   return injected;
+}"""
+
+TWIN_PROBE = """() => {
+  const base = {name: 'twin', description: 'd', category: 'twin-probe', tags: [],
+    tokensAlwaysOn: 1, tokensOnInvoke: 1, bundledFiles: 0, tokensBundled: 0,
+    lint: [], plugins: []};
+  const a = Object.assign({}, base, {source: 'one', path: 'skills/a/twin'});
+  const b = Object.assign({}, base, {source: 'two', path: 'skills/b/twin'});
+  state.data.skills.push(a, b);
+  const saved = [...state.picked];
+  state.picked.clear();
+  render();
+  [...document.querySelectorAll('.card')]
+    .find(c => c.querySelector('h4').textContent === 'twin')
+    .querySelector('.pick').click();
+  const picked = document.querySelectorAll('.card.picked').length;
+  state.picked.clear();
+  saved.forEach(k => state.picked.add(k));
+  state.data.skills.pop();
+  state.data.skills.pop();
+  render();
+  return picked;
 }"""
 
 
@@ -90,6 +112,13 @@ def check(page, url: str, expected_skills: int, shots: Path | None, theme: str) 
         problems.append(
             f"[{theme}] a hostile skill name/category/tag produced {injected} live element(s) — "
             "an interpolation is missing escapeHtml"
+        )
+
+    twin_picked = page.evaluate(TWIN_PROBE)
+    if twin_picked != 1:
+        problems.append(
+            f"[{theme}] picking one of two same-named skills marked {twin_picked} cards — "
+            "the picker is keying on name alone"
         )
 
     background = page.evaluate("getComputedStyle(document.body).backgroundColor")

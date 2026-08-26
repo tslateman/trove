@@ -182,6 +182,8 @@ aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh -
 const BUDGET = 5000;
 const state = { data: null, q: "", cat: null, plug: null, flag: null, view: "skills", picked: new Set() };
 const $ = (id) => document.getElementById(id);
+// Two sources can ship the same skill name, so a pick is keyed by both.
+const skillKey = (s) => s.source + ":" + s.path;
 
 fetch("catalog.json").then(r => r.json()).then(d => { state.data = d; boot(); });
 
@@ -219,7 +221,7 @@ function matches(s) {
   if (state.cat && s.category !== state.cat) return false;
   if (state.plug && !s.plugins.includes(state.plug)) return false;
   if (state.flag === "lint" && !s.lint.length) return false;
-  if (state.flag === "picked" && !state.picked.has(s.name)) return false;
+  if (state.flag === "picked" && !state.picked.has(skillKey(s))) return false;
   if (!state.q) return true;
   return (s.name + " " + s.description + " " + (s.tags || []).join(" ")).toLowerCase().includes(state.q);
 }
@@ -256,11 +258,12 @@ function render() {
 
   for (const r of rows) {
     const card = document.createElement("article");
-    card.className = "card" + (state.view === "skills" && state.picked.has(r.name) ? " picked" : "");
+    card.className = "card" + (state.view === "skills" && state.picked.has(skillKey(r)) ? " picked" : "");
     const meta = state.view === "skills"
       ? `<span class="pill cat">${escapeHtml(r.category)}</span>
          <span class="pill tok">+${r.tokensAlwaysOn} always-on</span>
          <span class="pill inv">${(r.tokensOnInvoke / 1000).toFixed(1)}k on invoke</span>
+         ${r.bundledFiles ? `<span class="pill inv">+${r.bundledFiles} file${r.bundledFiles === 1 ? "" : "s"} · ${(r.tokensBundled / 1000).toFixed(1)}k</span>` : ""}
          ${r.lint.map(c => `<span class="pill lint">${escapeHtml(c)}</span>`).join("")}`
       : `<span class="pill cat">${escapeHtml(r.category || "—")}</span>
          ${r.version ? `<span class="pill ver">v${escapeHtml(r.version)}</span>` : ""}
@@ -284,7 +287,8 @@ function render() {
     }
     if (state.view === "skills") {
       card.querySelector(".pick").onclick = () => {
-        state.picked.has(r.name) ? state.picked.delete(r.name) : state.picked.add(r.name);
+        const key = skillKey(r);
+        state.picked.has(key) ? state.picked.delete(key) : state.picked.add(key);
         render();
       };
     }
@@ -298,7 +302,7 @@ function escapeHtml(s) {
 }
 
 function renderStack() {
-  const chosen = state.data.skills.filter(s => state.picked.has(s.name));
+  const chosen = state.data.skills.filter(s => state.picked.has(skillKey(s)));
   $("stack").classList.toggle("hidden", chosen.length === 0);
   if (!chosen.length) return;
   const cost = chosen.reduce((n, s) => n + s.tokensAlwaysOn, 0);

@@ -149,12 +149,13 @@ bundle value would then be a guess.
 
 ## Token estimates
 
-`scan` and `catalog` report two numbers per skill:
+`scan` and `catalog` report three numbers per skill:
 
-| Number    | Meaning                                           |
-| --------- | ------------------------------------------------- |
-| always-on | name + description, paid in every session         |
-| on invoke | the SKILL.md body, paid each time the skill fires |
+| Number    | Meaning                                               |
+| --------- | ----------------------------------------------------- |
+| always-on | name + description, paid in every session             |
+| on invoke | the SKILL.md body, paid each time the skill fires     |
+| bundled   | files beside SKILL.md, paid when the skill reads them |
 
 Constants were fit by least squares against `claude plugin details` over 55
 skills. `trove calibrate` re-runs that comparison and prints the error.
@@ -166,6 +167,11 @@ skills. `trove calibrate` re-runs that comparison and prints the error.
 
 Re-run `calibrate` when Claude Code changes how it counts; the constants live in
 `src/trove/models.py`.
+
+The bundled estimate reuses the on-invoke ratio and is not calibrated:
+`claude plugin details` prices what Claude Code preloads, and bundled files
+load only when the skill reads them. A binary counts as a file and contributes
+nothing.
 
 ## Fetching
 
@@ -276,13 +282,9 @@ UI so the registry can nudge without breaking.
 
 - The catalog indexes skills only. Plugins shipping agents, commands, or hooks
   report zero skills.
-- Only `SKILL.md` is counted. A skill's `scripts/`, `references/`, and `assets/`
-  cost nothing in the catalog and plenty when the skill fires.
 - Eval scores and invocation counts are not wired up yet.
-- The stack picker keys selections by skill name, so two sources shipping the
-  same skill name collapse into one entry.
 
-Planned work on all four lives in [ROADMAP.md](ROADMAP.md).
+Planned work on each lives in [ROADMAP.md](ROADMAP.md).
 
 ## Development
 
