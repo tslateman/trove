@@ -104,6 +104,31 @@ def check(
     if picked not in snippet:
         problems.append(f"[{theme}] bundle snippet omits the picked skill {picked!r}")
 
+    page.click("#clear")
+    page.wait_for_timeout(200)
+    page.click("#t-atlas")
+    page.wait_for_selector("#mapbox svg", timeout=5000)
+    leaves = page.locator("#mapbox g.leaf").count()
+    if leaves != expected_skills:
+        problems.append(
+            f"[{theme}] atlas rendered {leaves} leaves, catalog has {expected_skills}"
+        )
+    if page.locator("#mapbox g.cnode").count() == 0:
+        problems.append(f"[{theme}] atlas rendered no branch nodes")
+    page.locator("#mapbox g.leaf").first.click()
+    page.wait_for_timeout(200)
+    now_picked = page.locator("#mapbox g.leaf.sel").count()
+    if now_picked != 1:
+        problems.append(
+            f"[{theme}] clicking an atlas leaf did not pick it, sel count {now_picked}"
+        )
+    page.click("#t-skills")
+    page.wait_for_timeout(200)
+    if page.locator("article.card.picked").count() == 0:
+        problems.append(
+            f"[{theme}] a pick made in the atlas did not carry over to Skills view"
+        )
+
     page.fill("#q", "zzzznomatch")
     page.wait_for_timeout(200)
     if page.locator(".card").count() != 0:

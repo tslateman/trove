@@ -137,6 +137,24 @@ a plugin block per source, each scoped to only the skills you picked from it.
 
 ![Filtering to a plugin from one repo, picking a skill, filtering to a plugin from another repo, picking a second skill: the composed bundle splits into a block per source](docs/demo-mixing.gif)
 
+## Browsing the atlas
+
+The Atlas tab is a third way to read the catalog, beside Skills and Plugins: a
+radial map grouping every skill by category, and a word cloud of the
+registry's vocabulary sized by how many skills carry each word. Both read the
+same data the cards do, so there is nothing new to build or configure.
+
+Dragging pans the map and scrolling zooms it. Clicking a branch folds it.
+Clicking a skill picks it, same as the checkbox on its card, so a stack built
+from the atlas is the same stack the Skills tab shows. Clicking a cloud word
+sets the search box, which narrows both views at once.
+
+![Switching to the Atlas tab, picking a skill on the map, clicking the word "review" in the cloud to narrow both the map and the search box](docs/demo-atlas.gif)
+
+A category with more skills than its neighbors gets a wider arc, not a
+warning; the branch is still there to fold or zoom into. Categories past the
+14th-largest fold into an `other` branch rather than crowding the rim.
+
 ## Editing a plugin's description
 
 Edit `.claude-plugin/plugin.json` in the repo that owns the plugin — nowhere
@@ -315,9 +333,9 @@ just demo      # record an mp4 walkthrough of the catalog
 `just verify` serves the site and drives it in headless Chromium. It fails if
 the card count drifts from the catalog, a console error fires, the stack count
 doesn't update after picking a skill, the generated bundle omits a picked
-skill, the page scrolls sideways at 390px, both themes paint the same
-background, or a hostile
-skill name survives into the DOM as a live element.
+skill, the atlas leaf count drifts from the catalog, a leaf pick doesn't carry
+over to Skills, the page scrolls sideways at 390px, both themes paint the same
+background, or a hostile skill name survives into the DOM as a live element.
 
 `just demo` drives the same page through `scripts/demo.yml` and writes
 `out/demo.mp4`. Every step waits on the state it expects, so a recording that
