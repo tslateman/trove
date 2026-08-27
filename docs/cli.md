@@ -76,9 +76,13 @@ wrote out/catalog.json: 56 skills, ~7,329 tok always-on
 ```
 
 `catalog.json` carries every skill with its token costs, category, tags, owning
-plugins, and lint state, plus the orphans no plugin ships.
+plugins, and lint state, plus the orphans no plugin ships. A skill name that
+more than one source ships is a twin; `just twins` lists each pair with the
+always-on price per side, and the site's Shipped twice filter shows the same
+set.
 
-Recipes: `just catalog`, `just catalog-offline`, `just dist`, `just orphans`.
+Recipes: `just catalog`, `just catalog-offline`, `just dist`, `just orphans`,
+`just twins`.
 
 ## serve
 

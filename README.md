@@ -50,6 +50,7 @@ just drift         # bundle fields that disagree with their source plugin.json
 just sync-local-check  # preview local-marketplace updates
 just sync-local        # apply them
 just orphans       # skills no plugin ships
+just twins         # skill names more than one source ships
 just calibrate skills skills@local   # check estimates against Claude Code
 ```
 
@@ -136,6 +137,31 @@ into one stack still works: the generated snippet groups by source and emits
 a plugin block per source, each scoped to only the skills you picked from it.
 
 ![Filtering to a plugin from one repo, picking a skill, filtering to a plugin from another repo, picking a second skill: the composed bundle splits into a block per source](docs/demo-mixing.gif)
+
+## Twins
+
+A skill name that more than one source ships is a twin. The row shows the
+source, `just twins` lists each pair with the price each side charges, and the
+Shipped twice filter narrows the catalog to them. Picks stay apart because the
+stack keys a pick by source and path.
+
+![Filtering the catalog to the names two sources ship, picking both halves of the maintainability pair so the bundle splits into a block per source, and opening a row to read which repo it came from](docs/demo-twins.gif)
+
+Claude Code keeps twins apart the same way. A plugin's skills are namespaced as
+`/<plugin>:<skill>`, so a personal `/refactor` and a plugin's
+`/tslateman-skills:refactor` both load and neither overrides the other, which
+is why a twin pays its listing twice. Only same-named skills at different
+levels override each other: enterprise over personal, personal over project.
+A repo checked out or symlinked under `~/.claude/skills/` with a
+`.claude-plugin/plugin.json` loads as a skills-directory plugin with no
+install step. Installing the same repo from
+this registry instead (`claude plugin marketplace add <registry>`, then
+`claude plugin install <plugin>@<name>`) pins it to the commit the catalog was
+built from and lets `claude plugin update` move it. The mechanics are in Claude
+Code's docs: [plugins](https://code.claude.com/docs/en/plugins),
+[marketplaces](https://code.claude.com/docs/en/plugin-marketplaces), and
+[skills](https://code.claude.com/docs/en/skills). Retire a twin by deleting one
+side; the catalog drops it on the next build.
 
 ## Browsing the atlas
 
@@ -340,7 +366,9 @@ paint the same background, or a hostile skill name survives into the DOM as a
 live element.
 
 `just demo` drives the same page through `scripts/demo.yml` and writes
-`out/demo.mp4`. Every step waits on the state it expects, so a recording that
+`out/demo.mp4`; pass another storyboard and output to record a different
+journey, as `just demo scripts/demo-twins.yml out/demo-twins.mp4` does for the
+twins gif. Every step waits on the state it expects, so a recording that
 finishes is also a passing run. It needs `shot-scraper`:
 
 ```bash

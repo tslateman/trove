@@ -72,6 +72,10 @@ drift:
 orphans: catalog
     @jq -r '.orphans[]' {{ out }}/catalog.json | grep . || echo "none"
 
+# Report skill names that more than one source ships, with each source's always-on price
+twins: catalog
+    @jq -r '[.skills[] | {name, source, tokensAlwaysOn}] | group_by(.name) | map(select(length > 1)) | .[] | "\(.[0].name)\t" + (map("\(.source) +\(.tokensAlwaysOn)") | join("  "))' {{ out }}/catalog.json | column -t -s $'\t' | grep . || echo "none"
+
 # Report skills that discovery cannot use
 lint:
     uv run trove --bundle {{ bundle }} lint
@@ -131,8 +135,8 @@ shots dir="shots": catalog
     uv run --with playwright python scripts/verify_ui.py --port {{ port }} --out {{ out }} --shots {{ dir }}
     echo "wrote {{ dir }}/catalog-light.png and {{ dir }}/catalog-dark.png"
 
-# Record an mp4 walkthrough of the catalog
-demo video="out/demo.mp4": catalog
+# Record an mp4 walkthrough of the catalog, e.g. `just demo scripts/demo-twins.yml out/demo-twins.mp4`
+demo storyboard="scripts/demo.yml" video="out/demo.mp4": catalog
     #!/usr/bin/env bash
     set -euo pipefail
     if ! command -v shot-scraper >/dev/null; then
@@ -150,7 +154,7 @@ demo video="out/demo.mp4": catalog
       kill -0 $server 2>/dev/null || { echo "preview server exited before answering" >&2; exit 1; }
       sleep 0.2
     done
-    sed 's|127.0.0.1:8787|127.0.0.1:{{ port }}|' scripts/demo.yml > {{ out }}/demo.yml
+    sed 's|127.0.0.1:8787|127.0.0.1:{{ port }}|' {{ storyboard }} > {{ out }}/demo.yml
     mp4="{{ video }}"
     shot-scraper video {{ out }}/demo.yml -o "${mp4%.mp4}.webm" --mp4
     echo "wrote $mp4"

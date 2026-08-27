@@ -388,7 +388,7 @@ const VIEWS = ["skills", "plugins", "atlas"];
 const SORTS = { category: s => s.category, on: s => s.tokensAlwaysOn, fire: s => s.tokensOnInvoke, files: s => s.tokensBundledMax };
 const RAW_GITHUB = "https://raw.githubusercontent.com/";
 const state = { data: null, q: "", cat: null, plug: null, flag: null, view: "skills",
-  sort: { key: "name", dir: 1 }, picked: new Set(), open: new Set() };
+  sort: { key: "name", dir: 1 }, picked: new Set(), open: new Set(), twins: new Set() };
 const $ = (id) => document.getElementById(id);
 // Two sources can ship the same skill name, so a pick is keyed by both.
 const skillKey = (s) => s.source + ":" + s.path;
@@ -467,7 +467,7 @@ function readUrl() {
   state.q = $("q").value.toLowerCase();
   state.cat = p.get("cat");
   state.plug = p.get("plugin");
-  state.flag = ["lint", "picked"].includes(p.get("flag")) ? p.get("flag") : null;
+  state.flag = ["lint", "picked", "twins"].includes(p.get("flag")) ? p.get("flag") : null;
   const [key, dir] = (p.get("sort") || "name").split(":");
   state.sort = key === "name" || SORTS[key] ? { key, dir: dir === "desc" ? -1 : 1 } : { key: "name", dir: 1 };
 }
@@ -502,6 +502,7 @@ function matches(s) {
   if (state.cat && s.category !== state.cat) return false;
   if (state.plug && !s.plugins.includes(state.plug)) return false;
   if (state.flag === "lint" && !s.lint.length) return false;
+  if (state.flag === "twins" && !state.twins.has(s.name)) return false;
   if (state.flag === "picked" && !state.picked.has(skillKey(s))) return false;
   if (!state.q) return true;
   return (s.name + " " + s.description + " " + (s.tags || []).join(" ")).toLowerCase().includes(state.q);
@@ -529,8 +530,17 @@ function sortSkills(list) {
 }
 
 /* ---------- rendering ---------- */
+// A name that more than one source ships. The stack keys picks by source, so
+// twins never collide there; the filter exists so the overlap is visible.
+function twinNames(skills) {
+  const sources = new Map();
+  for (const s of skills) (sources.get(s.name) || sources.set(s.name, new Set()).get(s.name)).add(s.source);
+  return new Set([...sources].filter(([, srcs]) => srcs.size > 1).map(([name]) => name));
+}
+
 function render() {
   const skills = state.data.skills;
+  state.twins = twinNames(skills);
   document.body.classList.toggle("has-stack", state.picked.size > 0);
   for (const v of VIEWS) {
     $("t-" + v).setAttribute("aria-current", v === state.view ? "page" : "false");
@@ -583,6 +593,12 @@ function renderFacets(skills) {
   lintChip.classList.add("warnish");
   lintChip.title = "Skills whose frontmatter would stop Claude Code from choosing or reading them as written; each row names the failed check";
   flags.appendChild(lintChip);
+  if (state.twins.size) {
+    const twinChip = chip("Shipped twice", skills.filter(s => state.twins.has(s.name)).length, state.flag === "twins",
+      () => { state.flag = state.flag === "twins" ? null : "twins"; });
+    twinChip.title = "A skill name that more than one source ships; the row's source label tells them apart";
+    flags.appendChild(twinChip);
+  }
 }
 
 function tile(label, count, pressed, fallback, apply) {

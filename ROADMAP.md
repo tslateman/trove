@@ -76,9 +76,12 @@ Partly covered. `just drift` catches bundle fields that disagree with their
 source `plugin.json`, and `just orphans` finds skills no plugin ships. Neither
 sees two sources shipping the same capability, and nothing reports age.
 
-- [ ] **Near-duplicate detection.** Compare skills across sources by name,
-      description, and body, and report overlap. Token cost makes the redundancy
-      quantifiable once it is visible.
+- [x] **Exact-name twins.** `just twins` lists every skill name that more
+      than one source ships, with each source's always-on price, and the
+      catalog's twins filter shows the same set with the source on each row.
+- [ ] **Near-duplicate detection.** Compare skills across sources by
+      description and body, and report overlap that a shared name does not
+      expose. Token cost makes the redundancy quantifiable once it is visible.
 - [ ] **Staleness signal.** Surface last-changed date per skill and flag a
       source whose upstream has moved past its pin.
 

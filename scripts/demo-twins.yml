@@ -1,0 +1,34 @@
+output: out/demo-twins.webm
+url: http://127.0.0.1:8787/
+viewport:
+  width: 1280
+  height: 800
+cursor: true
+wait_for: "article.row >> nth=0"
+scenes:
+  - name: Open the catalog
+    do:
+      - pause: 1.5
+  - name: Show only the names two sources ship
+    do:
+      - click: "#f-flag button:has-text('Shipped twice')"
+      - wait_for: "#f-flag button[aria-pressed=true]:has-text('Shipped twice')"
+      - pause: 2.5
+  - name: Pick both halves of one pair and watch the bundle split per source
+    do:
+      - fill: { into: "#q", text: "maintainability" }
+      - wait_for: "article.row:has(h4:text-is('maintainability')) >> nth=1"
+      - pause: 1
+      - click: "article.row:has(h4:text-is('maintainability')) >> nth=0 >> .pick"
+      - wait_for: "#stackcount:has-text('1 skill')"
+      - pause: 0.8
+      - click: "article.row:has(h4:text-is('maintainability')) >> nth=1 >> .pick"
+      - wait_for: "#stackcount:has-text('2 skills')"
+      - wait_for: "#snippet:has-text('my-stack-dotfiles')"
+      - wait_for: "#snippet:has-text('my-stack-skills')"
+      - pause: 3
+  - name: Open a row to see which repo it came from
+    do:
+      - click: "article.row:has(h4:text-is('maintainability')) >> nth=1 >> .more"
+      - wait_for: "article.row.open .detail"
+      - pause: 2.5
