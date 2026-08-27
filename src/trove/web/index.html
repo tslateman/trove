@@ -4,13 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Trove</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #fbfaf8; --panel: #ffffff; --ink: #1a1815; --muted: #6b6560;
   --line: #e6e1d9; --accent: #b4541e; --accent-soft: #f5e9e1;
   --ok: #2f6b45; --ok-soft: #e5efe8; --warn: #8a6d1f; --warn-soft: #f7efd8;
   --shadow: 0 1px 2px rgba(26,24,21,.05), 0 4px 16px rgba(26,24,21,.04);
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --grid-dot: #e9e4dc;
+  --sans: "IBM Plex Sans", ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme=light]) {
@@ -18,6 +23,7 @@
     --line: #2e2b25; --accent: #e08b52; --accent-soft: #2c211a;
     --ok: #7fb894; --ok-soft: #1c2a21; --warn: #d4b25e; --warn-soft: #2a2517;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.2);
+    --grid-dot: #1f1d18;
   }
 }
 :root[data-theme=dark] {
@@ -25,123 +31,200 @@
   --line: #2e2b25; --accent: #e08b52; --accent-soft: #2c211a;
   --ok: #7fb894; --ok-soft: #1c2a21; --warn: #d4b25e; --warn-soft: #2a2517;
   --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.2);
+  --grid-dot: #1f1d18;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
-  margin: 0; background: var(--bg); color: var(--ink);
-  font: 15px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+  margin: 0; color: var(--ink); font: 15px/1.55 var(--sans);
+  background: var(--bg) radial-gradient(var(--grid-dot) 1px, transparent 1px) 0 0 / 22px 22px;
   -webkit-font-smoothing: antialiased;
 }
+body.has-stack { padding-bottom: 210px; }
 a { color: inherit; }
-header {
-  position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent);
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- header ---------- */
+header.site {
+  position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 90%, transparent);
   backdrop-filter: blur(12px); border-bottom: 1px solid var(--line);
 }
-.bar { max-width: 1280px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; }
-.brand { display: flex; align-items: baseline; gap: 10px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; min-height: 58px; padding-top: 8px; padding-bottom: 8px; }
+.brand { display: flex; align-items: baseline; gap: 9px; text-decoration: none; }
 .brand b { font-size: 19px; letter-spacing: -.02em; }
-.brand span { color: var(--muted); font-size: 13px; }
-.search { flex: 1 1 220px; min-width: 0; position: relative; max-width: 520px; }
+.brand span { color: var(--muted); font: 12.5px/1 var(--mono); }
+.nav { display: flex; gap: 2px; }
+.nav a {
+  text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 500; padding: 7px 11px;
+  border-radius: 8px; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0;
+}
+.nav a:hover { color: var(--ink); background: var(--panel); }
+.nav a[aria-current=page] { color: var(--accent); border-bottom-color: var(--accent); }
+.search { flex: 1 1 200px; min-width: 0; position: relative; max-width: 460px; margin-left: auto; }
 .search input {
-  width: 100%; padding: 9px 12px 9px 34px; border-radius: 9px; font: inherit;
+  width: 100%; padding: 8px 40px 8px 34px; border-radius: 9px; font: inherit; font-size: 14px;
   border: 1px solid var(--line); background: var(--panel); color: var(--ink);
 }
 .search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
 .search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); opacity: .45; }
 .kbd {
-  position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font: 11px/1 var(--mono);
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 11px/1 var(--mono);
   color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; pointer-events: none;
 }
-.totals { margin-left: auto; font: 12px/1.4 var(--mono); color: var(--muted); text-align: right; white-space: nowrap; }
-.totals b { color: var(--ink); }
 .iconbtn { border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 8px;
-  padding: 7px 9px; cursor: pointer; font-size: 13px; }
+  padding: 6px 9px; cursor: pointer; font-size: 13px; }
 .iconbtn:hover { color: var(--ink); border-color: var(--accent); }
 
-main { max-width: 1280px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 208px 1fr; gap: 28px; }
-@media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { order: 2; } }
-@media (max-width: 560px) { .totals { display: none; } }
+/* ---------- page head ---------- */
+main { padding-top: 26px; padding-bottom: 60px; }
+.crumbs { display: flex; gap: 8px; align-items: center; font: 12.5px/1 var(--mono); color: var(--muted); margin-bottom: 14px; }
+.crumbs a { text-decoration: none; }
+.crumbs a:hover { color: var(--accent); }
+.crumbs b { color: var(--ink); font-weight: 500; }
+.pagehead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px; margin-bottom: 22px; }
+.pagehead h1 { margin: 0 0 4px; font-size: 30px; line-height: 1.1; letter-spacing: -.025em; font-weight: 600; }
+.lede { margin: 0; color: var(--muted); font-size: 14.5px; max-width: 62ch; }
+.lede b { color: var(--ink); font-weight: 500; font-family: var(--mono); font-size: 13.5px; }
+.lede code { font: 13px/1 var(--mono); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; }
 
-aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh - 100px); overflow-y: auto; }
-.facet { margin-bottom: 22px; }
-.facet h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
-.facet button {
-  display: flex; width: 100%; justify-content: space-between; gap: 8px; align-items: center;
-  padding: 5px 8px; border: 0; border-radius: 7px; background: none; color: var(--ink);
-  font: inherit; font-size: 13.5px; cursor: pointer; text-align: left;
+/* ---------- category tiles ---------- */
+.tiles { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 10px; margin: 0 -2px 6px; scrollbar-width: thin; }
+.tile {
+  flex: 0 0 auto; min-width: 128px; text-align: left; display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 14px 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel);
+  cursor: pointer; box-shadow: var(--shadow); transition: border-color .12s, transform .12s;
 }
-.facet button:hover { background: var(--panel); }
-.facet button[aria-pressed=true] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-.facet button i { font-style: normal; font: 11px/1 var(--mono); color: var(--muted); }
-.facet button[aria-pressed=true] i { color: var(--accent); }
-.facet button.fallback span::after { content: " · source"; color: var(--muted); font-weight: 400; font-size: 11px; }
-aside.inert .facet { opacity: .45; }
-aside.inert .facet button { cursor: default; pointer-events: none; }
-.asidenote { display: none; font-size: 12px; line-height: 1.5; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 10px; margin: 0 0 18px; }
-aside.inert .asidenote { display: block; }
+.tile:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); transform: translateY(-1px); }
+.tile b { font: 500 13.5px/1.2 var(--mono); letter-spacing: -.01em; }
+.tile i { font: 12px/1 var(--mono); color: var(--muted); font-style: normal; }
+.tile i::after { content: " skills"; }
+.tile small { font: 10.5px/1 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.tile[aria-pressed=true] { border-color: var(--accent); background: var(--accent-soft); }
+.tile[aria-pressed=true] b, .tile[aria-pressed=true] i { color: var(--accent); }
 
-.tabs { display: flex; gap: 4px; margin-bottom: 18px; }
-.tabs button { border: 1px solid var(--line); background: var(--panel); color: var(--muted);
-  padding: 6px 14px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; }
-.tabs button[aria-pressed=true] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
-
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(304px, 1fr)); gap: 14px; }
-.card {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 15px 16px;
-  box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 9px; position: relative;
-  transition: border-color .12s, transform .12s;
+/* ---------- toolbar ---------- */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 10px 0 12px; }
+.toolbar .group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.toolbar .label { font: 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin-right: 2px; }
+.chip {
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 5px 11px;
+  border-radius: 999px; font-size: 13px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center;
 }
-.card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
-.card.picked { border-color: var(--accent); }
-.card h4 { margin: 0; font: 600 15px/1.3 var(--mono); letter-spacing: -.01em; padding-right: 28px; }
-.card p { margin: 0; font-size: 13.2px; color: var(--muted); line-height: 1.5;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.card p.clipped { cursor: zoom-in; }
-.card p.full { -webkit-line-clamp: unset; cursor: auto; }
-.card p.open { -webkit-line-clamp: unset; cursor: zoom-out; }
-.card .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; align-items: center; }
-.pill { font: 11px/1 var(--mono); padding: 4px 7px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
-.pill.cat { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
-.pill.tok { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
-.pill.inv { background: transparent; }
-.pill.ver { font-weight: 600; color: var(--ink); }
-.pill.lint { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
-.legend { margin: 0 0 14px; font-size: 12px; color: var(--muted); }
+.chip i { font: 11px/1 var(--mono); font-style: normal; opacity: .8; }
+.chip:hover { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.chip[aria-pressed=true] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+.chip.warnish[aria-pressed=true] { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+.showing { margin-left: auto; font: 12.5px/1 var(--mono); color: var(--muted); }
+.showing button { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0 0 0 8px; font: inherit; }
+.legend { margin: 0 0 12px; font-size: 12.5px; color: var(--muted); }
 .legend b { color: var(--ok); font-weight: 600; }
-.pick {
-  position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 6px;
-  border: 1px solid var(--line); background: var(--bg); color: transparent; cursor: pointer;
-  font: 13px/1 sans-serif; display: grid; place-items: center; padding: 0;
-}
-.pick:hover { border-color: var(--accent); }
-.card.picked .pick { background: var(--accent); border-color: var(--accent); color: #fff; }
 
+/* ---------- list ---------- */
+.list { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); overflow: hidden; }
+.cols { grid-template-columns: 40px 34px minmax(0, 1fr) 112px 112px 140px 104px 36px; }
+.listhead {
+  display: grid; align-items: center; gap: 0 10px; padding: 0 6px 0 2px; border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 60%, var(--panel));
+}
+.listhead > * { font: 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 10px 6px; text-align: left; }
+.listhead button { border: 0; background: none; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
+.listhead button:hover { color: var(--ink); }
+.listhead button[aria-sort=ascending], .listhead button[aria-sort=descending] { color: var(--accent); font-weight: 600; }
+.listhead button::after { content: "↕"; opacity: .35; }
+.listhead button[aria-sort=ascending]::after { content: "↑"; opacity: 1; }
+.listhead button[aria-sort=descending]::after { content: "↓"; opacity: 1; }
+.listhead .num, .row .num { text-align: right; justify-content: flex-end; }
+.row {
+  display: grid; align-items: center; gap: 0 10px; padding: 0 6px 0 2px; border-bottom: 1px solid var(--line);
+  cursor: pointer; transition: background .1s;
+}
+.row:last-child { border-bottom: 0; }
+.row:hover { background: color-mix(in srgb, var(--accent-soft) 45%, var(--panel)); }
+.row.picked { background: color-mix(in srgb, var(--accent-soft) 70%, var(--panel)); box-shadow: inset 3px 0 0 var(--accent); }
+.row > * { padding: 11px 6px; min-width: 0; }
+.pickcell { display: grid; place-items: center; cursor: pointer; }
+.pick { width: 17px; height: 17px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.rank { font: 12px/1 var(--mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.ident .line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 9px; }
+.ident h4 { margin: 0; font: 600 14.5px/1.3 var(--mono); letter-spacing: -.01em; }
+.ident .src { font: 12px/1 var(--mono); color: var(--muted); }
+.ident p { margin: 2px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row.open .ident p { white-space: normal; }
+.pill { font: 11px/1 var(--mono); padding: 4px 7px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.pill.cat { background: var(--accent-soft); border-color: transparent; color: var(--accent); cursor: pointer; }
+.pill.cat:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pill.lint { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.pill.ver { font-weight: 600; color: var(--ink); }
+.pill.ok { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
+.catcell { display: flex; }
+.num { font: 13px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.num.on { color: var(--ok); font-weight: 600; }
+.num.dim { color: var(--muted); opacity: .6; }
+.more { border: 0; background: none; color: var(--muted); cursor: pointer; display: grid; place-items: center; border-radius: 6px; }
+.more:hover { color: var(--accent); background: var(--accent-soft); }
+.more svg { transition: transform .15s; }
+.row.open .more svg { transform: rotate(180deg); }
+.detail {
+  grid-column: 1 / -1; display: none; cursor: auto; padding: 0 12px 16px 76px;
+  font-size: 13.5px; color: var(--muted); line-height: 1.5;
+}
+.row.open .detail { display: block; }
+.detail dl { display: grid; grid-template-columns: max-content 1fr; gap: 5px 16px; margin: 8px 0 0; }
+.detail dt { font: 11px/1.6 var(--mono); text-transform: uppercase; letter-spacing: .08em; }
+.detail dd { margin: 0; color: var(--ink); font: 13px/1.6 var(--mono); overflow-wrap: anywhere; }
+.detail dd .pill { margin-right: 4px; }
+.detail .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.btn {
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px;
+  padding: 6px 12px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.btn.primary:hover { color: #fff; filter: brightness(1.07); }
+.empty { padding: 56px 0; text-align: center; color: var(--muted); }
+.empty button { border: 0; background: none; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; padding: 0; }
+
+/* plugins */
+.pcols { grid-template-columns: minmax(0, 1fr) 120px minmax(300px, 460px); }
+.row.plugin { cursor: auto; }
+.row.plugin:hover { background: none; }
+.row.plugin .ident p { white-space: normal; }
+.row.plugin .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+.row.plugin .ident { padding: 16px 10px; }
+.tolist { border: 0; background: none; color: var(--accent); cursor: pointer; font: 500 13.5px/1 var(--mono); text-align: left; white-space: nowrap; }
+.tolist:hover { text-decoration: underline; text-underline-offset: 3px; }
+.install { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden; font: 12px/1.4 var(--mono); }
+.install code { flex: 1; padding: 8px 10px; overflow-x: auto; white-space: nowrap; color: var(--ink); }
+.install code::before { content: "$ "; color: var(--muted); }
+.install button { border: 0; border-left: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 0 10px; cursor: pointer; font: 12px/1 var(--mono); }
+.install button:hover { color: var(--accent); }
+
+/* ---------- stack tray ---------- */
 .stack {
-  position: fixed; right: 22px; bottom: 22px; width: 340px; z-index: 30;
-  background: var(--panel); border: 1px solid var(--accent); border-radius: 13px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.18); overflow: hidden;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(12px);
+  border-top: 2px solid var(--accent); box-shadow: 0 -8px 32px rgba(0,0,0,.12);
 }
 .stack.hidden { display: none; }
-.stack header { position: static; background: none; border: 0; }
-.stack .top { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
-.stack .top b { font-size: 14px; }
-.stack .top span { margin-left: auto; font: 12px/1 var(--mono); color: var(--muted); }
-.stack .body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.stack .wrap { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; gap: 16px; align-items: start; padding-top: 14px; padding-bottom: 14px; }
+.stack .sum b { display: block; font-size: 14px; }
+.stack .sum span { font: 12.5px/1.5 var(--mono); color: var(--muted); }
+.stack .sum span em { font-style: normal; color: var(--ok); font-weight: 600; }
 .stack pre {
-  margin: 0; max-height: 190px; overflow: auto; background: var(--bg); border: 1px solid var(--line);
-  border-radius: 8px; padding: 10px; font: 11.5px/1.5 var(--mono); white-space: pre;
+  margin: 0; max-height: 132px; overflow: auto; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 11px; font: 11.5px/1.5 var(--mono); white-space: pre;
 }
-.stack .row { display: flex; gap: 8px; }
-.stack .row button { flex: 1; border-radius: 8px; border: 1px solid var(--line); background: var(--bg);
-  color: var(--ink); padding: 7px; font: inherit; font-size: 12.5px; cursor: pointer; }
-.stack .row button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-.empty { padding: 60px 0; text-align: center; color: var(--muted); }
+.stack .acts { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
+.stack .acts .btn { justify-content: center; }
+.stack .acts .btn[aria-pressed=true] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 
-.atlas.hidden { display: none; }
-.mapnote { font: 12px/1.5 var(--mono); color: var(--muted); margin: 0 0 12px; }
+/* ---------- atlas ---------- */
+.atlasnote { font: 12.5px/1.5 var(--mono); color: var(--muted); margin: 0 0 12px; }
 .duo { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; align-items: stretch; }
-@media (max-width: 900px) { .duo { grid-template-columns: 1fr; } }
-.mapbox { position: relative; border: 1px solid var(--line); border-radius: 13px; background: var(--panel);
+.mapbox { position: relative; border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
   box-shadow: var(--shadow); overflow: hidden; }
 .mapbox svg { display: block; width: 100%; height: 66vh; min-height: 460px; max-height: 720px; cursor: grab; }
 .mapbox svg.panning { cursor: grabbing; }
@@ -160,121 +243,261 @@ aside.inert .asidenote { display: block; }
 .root-label { font: 700 17px/1 var(--mono); letter-spacing: .14em; fill: var(--accent); }
 .root-count { font: 12px/1 var(--mono); fill: var(--muted); }
 .leaf, .cw { transition: opacity .15s ease; }
-@media (prefers-reduced-motion: reduce) { .leaf, .cw { transition: none; } }
-
 .tooltip { position: absolute; pointer-events: none; z-index: 5; background: var(--panel); border: 1px solid var(--line);
   border-radius: 8px; box-shadow: var(--shadow); padding: 8px 11px; max-width: 300px; font-size: 12.5px; display: none; }
 .tooltip .tn { font: 700 12px/1 var(--mono); color: var(--accent); }
 .tooltip .to { font: 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 3px 0 4px; }
 .tooltip .th { color: var(--muted); line-height: 1.45; }
 .tooltip .tt { color: var(--ok); font: 11px/1 var(--mono); margin-top: 4px; }
-
-.cloudbox { position: relative; border: 1px solid var(--line); border-radius: 13px; background: var(--panel);
+.cloudbox { position: relative; border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
   box-shadow: var(--shadow); height: 460px; overflow: hidden; }
 .cw { position: absolute; font-weight: 600; color: var(--muted); background: none; border: none; padding: 0;
   cursor: pointer; line-height: 1; white-space: nowrap; }
 .cw.big { color: var(--ink); font-weight: 700; }
 .cw:hover { color: var(--accent); }
 .cw.active { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) { .duo { grid-template-columns: 1fr; } }
+@media (max-width: 760px) {
+  .wrap { padding: 0 16px; }
+  .bar { gap: 8px 12px; }
+  .brand { order: 0; }
+  #theme { order: 1; margin-left: auto; }
+  .search { order: 2; flex-basis: 100%; max-width: none; margin-left: 0; }
+  .nav { order: 3; width: 100%; }
+  .pagehead h1 { font-size: 26px; }
+  .listhead { display: none; }
+  .cols { grid-template-columns: 36px minmax(0, 1fr) 32px; }
+  .rank { display: none; }
+  .row .costs { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px 12px; padding-top: 0; }
+  .row .costs .num::before { content: attr(data-label) " "; color: var(--muted); font-weight: 400; }
+  .row .costs .num { text-align: left; }
+  .row .costs .num.dim { display: none; }
+  .detail { padding-left: 12px; }
+  .pcols { grid-template-columns: minmax(0, 1fr); }
+  .row.plugin > * { padding-top: 6px; padding-bottom: 6px; }
+  .row.plugin .ident { padding: 14px 10px 4px; }
+  .row.plugin .install { margin-bottom: 8px; }
+  .stack .wrap { grid-template-columns: 1fr; gap: 10px; }
+  .stack .wrap { padding-top: 10px; padding-bottom: 10px; }
+  .stack pre { max-height: 72px; }
+  .stack .acts { flex-direction: row; flex-wrap: wrap; min-width: 0; }
+  .stack .acts .btn { flex: 1 1 auto; white-space: nowrap; font-size: 12.5px; padding: 6px 10px; }
+  body.has-stack { padding-bottom: 260px; }
+}
+@media (min-width: 761px) { .row .costs { display: contents; } }
+@media (prefers-reduced-motion: reduce) { .leaf, .cw, .tile, .more svg, .row { transition: none; } }
 </style>
 </head>
 <body>
-<header>
-  <div class="bar">
-    <div class="brand"><b>Trove</b><span id="regname"></span></div>
+<header class="site">
+  <div class="wrap bar">
+    <a class="brand" href="./"><b>Trove</b><span id="regname"></span></a>
+    <nav class="nav" aria-label="Sections">
+      <a id="t-skills" href="./" aria-current="page">Skills</a>
+      <a id="t-plugins" href="./?view=plugins" aria-current="false">Plugins</a>
+      <a id="t-atlas" href="./?view=atlas" aria-current="false">Atlas</a>
+    </nav>
     <div class="search">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="Search skills, descriptions, tags" autocomplete="off">
-      <span class="kbd">⌘K</span>
+      <input id="q" type="search" placeholder="Search skills, descriptions, tags" autocomplete="off" aria-label="Search">
+      <span class="kbd">/</span>
     </div>
-    <div class="totals" id="totals"></div>
-    <button class="iconbtn" id="theme" title="Toggle theme">◐</button>
+    <button class="iconbtn" id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
   </div>
 </header>
 
-<main>
-  <aside id="sidebar">
-    <p class="asidenote">These facets filter Skills and Atlas. They do not change the Plugins list.</p>
-    <div class="facet"><h3>Category</h3><div id="f-cat"></div></div>
-    <div class="facet"><h3>Plugin</h3><div id="f-plug"></div></div>
-    <div class="facet"><h3>Flags</h3><div id="f-flag"></div></div>
-  </aside>
-  <section>
-    <div class="tabs">
-      <button id="t-skills" aria-pressed="true">Skills</button>
-      <button id="t-plugins" aria-pressed="false">Plugins</button>
-      <button id="t-atlas" aria-pressed="false">Atlas</button>
+<main class="wrap">
+  <section id="view-skills">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="./" id="crumb-reg"></a><span>/</span><b>Skills</b></nav>
+    <div class="pagehead">
+      <div>
+        <h1>Skills</h1>
+        <p class="lede" id="totals"></p>
+      </div>
+    </div>
+    <div class="tiles" id="f-cat" role="group" aria-label="Category"></div>
+    <div class="toolbar">
+      <div class="group" id="f-plug" role="group" aria-label="Plugin"></div>
+      <div class="group" id="f-flag" role="group" aria-label="Flags"></div>
+      <span class="showing" id="showing"></span>
     </div>
     <p class="legend" id="legend">Only <b>always-on</b> is charged every session. A body loads
       when the skill fires, and a bundled file only if the body sends it there.</p>
-    <div class="grid" id="grid"></div>
-    <div class="empty" id="empty" hidden>Nothing matches.</div>
-    <div class="atlas hidden" id="atlas">
-      <p class="mapnote">Drag to pan, scroll to zoom, click a branch to fold it, click a skill to
-        pick it. Search and picks stay in sync with Skills.</p>
-      <div class="duo">
-        <div class="mapbox" id="mapbox"><div class="tooltip" id="tooltip"></div></div>
-        <div class="cloudbox" id="cloudbox"></div>
+    <div class="list">
+      <div class="listhead cols" role="row" id="listhead">
+        <span></span><span>#</span>
+        <button data-sort="name">Skill</button>
+        <button data-sort="category">Category</button>
+        <button data-sort="on" class="num" title="Name and description, in the prompt every session whether or not the skill fires">Always-on</button>
+        <button data-sort="fire" class="num" title="The SKILL.md body, read only when the skill fires">When it fires</button>
+        <button data-sort="files" class="num" title="Files beside SKILL.md, each read only if the body sends the skill to it">Bundled</button>
+        <span></span>
       </div>
+      <div id="grid" role="list"></div>
+      <div class="empty" id="empty" hidden>Nothing matches. <button id="reset">Clear the filters</button></div>
+    </div>
+  </section>
+
+  <section id="view-plugins" hidden>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="./" id="crumb-reg-p"></a><span>/</span><b>Plugins</b></nav>
+    <div class="pagehead">
+      <div>
+        <h1>Plugins</h1>
+        <p class="lede" id="ptotals"></p>
+      </div>
+    </div>
+    <div class="list">
+      <div id="pgrid" role="list"></div>
+      <div class="empty" id="pempty" hidden>No plugin matches.</div>
+    </div>
+  </section>
+
+  <section id="view-atlas" class="atlas" hidden>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="./" id="crumb-reg-a"></a><span>/</span><b>Atlas</b></nav>
+    <div class="pagehead">
+      <div>
+        <h1>Atlas</h1>
+        <p class="lede" id="atotals"></p>
+      </div>
+    </div>
+    <p class="atlasnote">Drag to pan, scroll to zoom, click a branch to fold it, click a skill to
+      pick it. Search, filters, and picks stay in sync with Skills.</p>
+    <div class="duo" id="atlas">
+      <div class="mapbox" id="mapbox"><div class="tooltip" id="tooltip"></div></div>
+      <div class="cloudbox" id="cloudbox"></div>
     </div>
   </section>
 </main>
 
-<div class="stack hidden" id="stack">
-  <div class="top"><b>Your stack</b><span id="stackcount"></span></div>
-  <div class="body">
+<div class="stack hidden" id="stack" aria-live="polite">
+  <div class="wrap">
+    <div class="sum"><b>Your stack</b><span id="stackcount"></span></div>
     <pre id="snippet"></pre>
-    <div class="row">
-      <button id="copy" class="primary">Copy bundle</button>
-      <button id="clear">Clear</button>
+    <div class="acts">
+      <button id="copy" class="btn primary">Copy bundle</button>
+      <button id="showpicked" class="btn" aria-pressed="false">Show picked only</button>
+      <button id="clear" class="btn">Clear</button>
     </div>
   </div>
 </div>
 
 <script>
-const state = { data: null, q: "", cat: null, plug: null, flag: null, view: "skills", picked: new Set() };
+const VIEWS = ["skills", "plugins", "atlas"];
+const SORTS = { category: s => s.category, on: s => s.tokensAlwaysOn, fire: s => s.tokensOnInvoke, files: s => s.tokensBundledMax };
+const RAW_GITHUB = "https://raw.githubusercontent.com/";
+const state = { data: null, q: "", cat: null, plug: null, flag: null, view: "skills",
+  sort: { key: "name", dir: 1 }, picked: new Set(), open: new Set() };
 const $ = (id) => document.getElementById(id);
 // Two sources can ship the same skill name, so a pick is keyed by both.
 const skillKey = (s) => s.source + ":" + s.path;
+const k = (n) => (n / 1000).toFixed(1) + "k";
 
 fetch("catalog.json").then(r => r.json()).then(d => { state.data = d; boot(); });
 
 function boot() {
-  $("regname").textContent = state.data.registry;
-  $("totals").innerHTML =
-    `<b>${state.data.totals.skills}</b> skills · <b>${state.data.totals.alwaysOn.toLocaleString()}</b> tok always-on`;
-  $("q").addEventListener("input", e => { state.q = e.target.value.toLowerCase(); render(); });
-  $("t-skills").onclick = () => setView("skills");
-  $("t-plugins").onclick = () => setView("plugins");
-  $("t-atlas").onclick = () => setView("atlas");
-  $("clear").onclick = () => { state.picked.clear(); render(); };
-  $("copy").onclick = copyBundle;
+  applyTheme(stored(localStorage, "theme"));
+  readUrl();
+  for (const key of stored(sessionStorage, "picked") || []) state.picked.add(key);
+  const d = state.data;
+  $("regname").textContent = d.registry;
+  for (const id of ["crumb-reg", "crumb-reg-p", "crumb-reg-a"]) $(id).textContent = d.registry;
+  const nSources = Object.keys(d.sources).length;
+  $("totals").innerHTML = `<b>${d.totals.skills}</b> skills from <b>${nSources}</b> source${nSources === 1 ? "" : "s"}` +
+    ` · <b>${d.totals.alwaysOn.toLocaleString()}</b> tokens always-on if you install them all.`;
+  $("ptotals").innerHTML = `<b>${d.plugins.length}</b> plugin${d.plugins.length === 1 ? "" : "s"} composed from ` +
+    `<b>${nSources}</b> source${nSources === 1 ? "" : "s"}. Each row carries its install command.`;
+
+  $("q").addEventListener("input", e => { state.q = e.target.value.toLowerCase(); writeUrl(); render(); });
+  for (const v of VIEWS) $("t-" + v).addEventListener("click", e => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    setView(v);
+  });
+  $("listhead").addEventListener("click", e => {
+    const b = e.target.closest("button[data-sort]");
+    if (!b) return;
+    const key = b.dataset.sort;
+    state.sort = state.sort.key === key ? { key, dir: -state.sort.dir } : { key, dir: key === "name" || key === "category" ? 1 : -1 };
+    writeUrl(); render();
+  });
+  $("reset").onclick = () => { state.cat = state.plug = state.flag = null; state.q = ""; $("q").value = ""; writeUrl(); render(); };
+  $("clear").onclick = () => { state.picked.clear(); if (state.flag === "picked") state.flag = null; persistPicks(); writeUrl(); render(); };
+  $("showpicked").onclick = () => { state.flag = state.flag === "picked" ? null : "picked"; if (state.view === "plugins") state.view = "skills"; writeUrl(true); render(); };
+  $("copy").onclick = () => copyText($("snippet").textContent, $("copy"), "Copy bundle");
   $("theme").onclick = toggleTheme;
   addEventListener("keydown", e => {
+    const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName);
     if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); $("q").focus(); $("q").select(); }
-    if (e.key === "Escape") { $("q").blur(); }
+    else if (e.key === "/" && !typing) { e.preventDefault(); $("q").focus(); $("q").select(); }
+    else if (e.key === "Escape") { $("q").blur(); }
   });
+  addEventListener("popstate", () => { readUrl(); render(); });
   render();
 }
 
+/* ---------- persistence ---------- */
+// Reading storage throws when a browser blocks site data, and the page must
+// still render with nothing remembered.
+function stored(box, key) {
+  try { const v = box.getItem("trove:" + key); return v ? JSON.parse(v) : null; } catch (err) { return null; }
+}
+function store(box, key, value) {
+  try { box.setItem("trove:" + key, JSON.stringify(value)); } catch (err) {}
+}
+// Picks live with the tab: a reload keeps the stack, a new tab starts clean.
+function persistPicks() { store(sessionStorage, "picked", [...state.picked]); }
+
+function applyTheme(theme) {
+  if (theme === "dark" || theme === "light") document.documentElement.setAttribute("data-theme", theme);
+}
 function toggleTheme() {
   const cur = document.documentElement.getAttribute("data-theme");
   const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-  document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+  const next = dark ? "light" : "dark";
+  applyTheme(next);
+  store(localStorage, "theme", next);
+}
+
+function readUrl() {
+  const p = new URLSearchParams(location.search);
+  state.view = VIEWS.includes(p.get("view")) ? p.get("view") : "skills";
+  $("q").value = p.get("q") || "";
+  state.q = $("q").value.toLowerCase();
+  state.cat = p.get("cat");
+  state.plug = p.get("plugin");
+  state.flag = ["lint", "picked"].includes(p.get("flag")) ? p.get("flag") : null;
+  const [key, dir] = (p.get("sort") || "name").split(":");
+  state.sort = key === "name" || SORTS[key] ? { key, dir: dir === "desc" ? -1 : 1 } : { key: "name", dir: 1 };
+}
+function writeUrl(push) {
+  const p = new URLSearchParams();
+  if (state.view !== "skills") p.set("view", state.view);
+  if ($("q").value) p.set("q", $("q").value);
+  if (state.cat) p.set("cat", state.cat);
+  if (state.plug) p.set("plugin", state.plug);
+  if (state.flag) p.set("flag", state.flag);
+  if (!(state.sort.key === "name" && state.sort.dir === 1)) p.set("sort", state.sort.key + (state.sort.dir < 0 ? ":desc" : ""));
+  const url = location.pathname + (p.toString() ? "?" + p : "");
+  history[push ? "pushState" : "replaceState"](null, "", url);
 }
 
 function setView(v) {
   state.view = v;
-  $("t-skills").setAttribute("aria-pressed", v === "skills");
-  $("t-plugins").setAttribute("aria-pressed", v === "plugins");
-  $("t-atlas").setAttribute("aria-pressed", v === "atlas");
-  $("legend").hidden = v !== "skills";
-  $("grid").style.display = v === "atlas" ? "none" : "";
-  $("atlas").classList.toggle("hidden", v !== "atlas");
-  $("sidebar").classList.toggle("inert", v === "plugins");
+  writeUrl(true);
+  render();
+  scrollTo({ top: 0 });
+}
+
+function togglePick(key) {
+  state.picked.has(key) ? state.picked.delete(key) : state.picked.add(key);
+  if (!state.picked.size && state.flag === "picked") { state.flag = null; writeUrl(); }
+  persistPicks();
   render();
 }
 
+/* ---------- filtering ---------- */
 function matches(s) {
   if (state.cat && s.category !== state.cat) return false;
   if (state.plug && !s.plugins.includes(state.plug)) return false;
@@ -283,31 +506,50 @@ function matches(s) {
   if (!state.q) return true;
   return (s.name + " " + s.description + " " + (s.tags || []).join(" ")).toLowerCase().includes(state.q);
 }
-
-// Plugin cards have no category/plugin/lint of their own to facet by — only
-// the shared search box applies to them.
+// Plugins carry no category, plugin, or lint of their own to filter by, so
+// only the shared search box narrows them.
 function matchesPlugin(p) {
   if (!state.q) return true;
   return (p.name + " " + (p.description || "") + " " + (p.tags || []).join(" ")).toLowerCase().includes(state.q);
 }
 
-function facet(host, entries, key, fallbackOf) {
-  host.innerHTML = "";
-  for (const [label, count] of entries) {
-    const b = document.createElement("button");
-    b.innerHTML = `<span>${escapeHtml(String(label))}</span><i>${count}</i>`;
-    b.setAttribute("aria-pressed", state[key] === label);
-    if (fallbackOf && fallbackOf.get(label)) {
-      b.classList.add("fallback");
-      b.title = "Derived from the repo name — not a curated category";
+function sortSkills(list) {
+  const { key, dir } = state.sort;
+  const idx = new Map(state.data.skills.map((s, i) => [s, i]));
+  const val = SORTS[key];
+  return [...list].sort((a, b) => {
+    let c = 0;
+    if (val) {
+      const va = val(a), vb = val(b);
+      c = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
     }
-    b.onclick = () => { state[key] = state[key] === label ? null : label; render(); };
-    host.appendChild(b);
-  }
+    if (c === 0) c = idx.get(a) - idx.get(b);
+    return c * dir;
+  });
 }
 
+/* ---------- rendering ---------- */
 function render() {
   const skills = state.data.skills;
+  document.body.classList.toggle("has-stack", state.picked.size > 0);
+  for (const v of VIEWS) {
+    $("t-" + v).setAttribute("aria-current", v === state.view ? "page" : "false");
+    $("view-" + v).hidden = v !== state.view;
+  }
+  if (state.view === "plugins") {
+    $("grid").innerHTML = "";
+    renderPlugins();
+  } else {
+    $("pgrid").innerHTML = "";
+    renderFacets(skills);
+    const shown = sortSkills(skills.filter(matches));
+    if (state.view === "atlas") renderAtlasView(shown, skills.length);
+    else renderList(shown, skills.length);
+  }
+  renderStack();
+}
+
+function renderFacets(skills) {
   const tally = (fn) => {
     const m = new Map();
     for (const s of skills) for (const v of [].concat(fn(s))) m.set(v, (m.get(v) || 0) + 1);
@@ -317,79 +559,192 @@ function render() {
   // when every skill wearing that label is one — a genuine category can
   // coincidentally share a name with a fallback from another source.
   const catFallback = new Map();
-  for (const s of skills) {
-    catFallback.set(s.category, (catFallback.get(s.category) ?? true) && s.categoryIsFallback);
-  }
-  facet($("f-cat"), tally(s => s.category), "cat", catFallback);
-  facet($("f-plug"), tally(s => s.plugins), "plug");
-  facet($("f-flag"), [
-    ["lint", skills.filter(s => s.lint.length).length],
-    ["picked", state.picked.size],
-  ], "flag");
+  for (const s of skills) catFallback.set(s.category, (catFallback.get(s.category) ?? true) && s.categoryIsFallback);
 
-  if (state.view === "atlas") {
-    const shown = skills.filter(matches);
-    $("empty").hidden = shown.length > 0;
-    renderAtlas(shown);
-    renderStack();
-    return;
+  const tiles = $("f-cat");
+  tiles.innerHTML = "";
+  tiles.appendChild(tile("All skills", skills.length, state.cat === null, false, () => { state.cat = null; }));
+  for (const [label, count] of tally(s => s.category)) {
+    tiles.appendChild(tile(label, count, state.cat === label, catFallback.get(label),
+      () => { state.cat = state.cat === label ? null : label; }));
   }
+
+  const plugs = $("f-plug");
+  plugs.innerHTML = '<span class="label">Plugin</span>';
+  plugs.appendChild(chip("Any", null, state.plug === null, () => { state.plug = null; }));
+  for (const [label, count] of tally(s => s.plugins)) {
+    plugs.appendChild(chip(label, count, state.plug === label, () => { state.plug = state.plug === label ? null : label; }));
+  }
+
+  const flags = $("f-flag");
+  flags.innerHTML = '<span class="label">Show</span>';
+  const lintChip = chip("Flagged by lint", skills.filter(s => s.lint.length).length, state.flag === "lint",
+    () => { state.flag = state.flag === "lint" ? null : "lint"; });
+  lintChip.classList.add("warnish");
+  lintChip.title = "Skills whose frontmatter would stop Claude Code from choosing or reading them as written; each row names the failed check";
+  flags.appendChild(lintChip);
+}
+
+function tile(label, count, pressed, fallback, apply) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "tile" + (fallback ? " fallback" : "");
+  b.setAttribute("aria-pressed", pressed);
+  b.innerHTML = `<b>${escapeHtml(label)}</b><i>${count}</i>${fallback ? "<small>source</small>" : ""}`;
+  if (fallback) b.title = "Derived from the repo name — not a curated category";
+  b.onclick = () => { apply(); writeUrl(); render(); };
+  return b;
+}
+
+function chip(label, count, pressed, apply) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "chip";
+  b.setAttribute("aria-pressed", pressed);
+  b.innerHTML = `${escapeHtml(label)}${count === null ? "" : `<i>${count}</i>`}`;
+  b.onclick = () => { apply(); writeUrl(); render(); };
+  return b;
+}
+
+function renderList(shown, total) {
+  for (const b of $("listhead").querySelectorAll("button[data-sort]")) {
+    b.setAttribute("aria-sort", b.dataset.sort === state.sort.key ? (state.sort.dir > 0 ? "ascending" : "descending") : "none");
+  }
+  const filtered = Boolean(state.q || state.cat || state.plug || state.flag);
+  $("showing").innerHTML = `${shown.length} of ${total}` +
+    (filtered ? '<button type="button" id="showing-reset">clear</button>' : "");
+  if (filtered) $("showing-reset").onclick = $("reset").onclick;
+  $("empty").hidden = shown.length > 0;
+  $("listhead").hidden = shown.length === 0;
 
   const grid = $("grid");
   grid.innerHTML = "";
-  const rows = state.view === "skills" ? skills.filter(matches) : state.data.plugins.filter(matchesPlugin);
-  $("empty").hidden = rows.length > 0;
-
-  for (const r of rows) {
-    const card = document.createElement("article");
-    card.className = "card" + (state.view === "skills" && state.picked.has(skillKey(r)) ? " picked" : "");
-    const meta = state.view === "skills"
-      ? `<span class="pill cat">${escapeHtml(r.category)}</span>
-         <span class="pill tok" title="Name and description, in the prompt every session whether or not the skill fires">+${r.tokensAlwaysOn} always-on</span>
-         <span class="pill inv" title="The SKILL.md body, read only when the skill fires">${(r.tokensOnInvoke / 1000).toFixed(1)}k when it fires</span>
-         ${r.bundledFiles ? `<span class="pill inv" title="Files beside SKILL.md, each read only if the body sends the skill to it">${r.bundledFiles} file${r.bundledFiles === 1 ? "" : "s"} · ≤${(r.tokensBundledMax / 1000).toFixed(1)}k if read</span>` : ""}
-         ${r.lint.map(c => `<span class="pill lint">${escapeHtml(c)}</span>`).join("")}`
-      : `<span class="pill cat">${escapeHtml(r.category || "—")}</span>
-         ${r.version ? `<span class="pill ver">v${escapeHtml(r.version)}</span>` : ""}
-         ${r.skills != null ? `<span class="pill">${r.skills} skill${r.skills === 1 ? "" : "s"}</span>` : ""}
-         ${r.curated ? '<span class="pill tok">curated</span>' : ""}
-         ${(r.tags || []).slice(0, 3).map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("")}`;
-    card.innerHTML = `
-      ${state.view === "skills" ? '<button class="pick">✓</button>' : ""}
-      <h4>${escapeHtml(r.name)}</h4>
-      <p class="${state.view === "skills" ? "" : "full"}" title="${escapeHtml(r.description || "")}">${escapeHtml(r.description || "")}</p>
-      <div class="meta">${meta}</div>`;
-    const body = card.querySelector("p");
-    if (state.view === "skills") {
-      requestAnimationFrame(() => {
-        if (body.scrollHeight > body.clientHeight + 1) body.classList.add("clipped");
-      });
-      body.onclick = () => {
-        body.classList.toggle("open");
-        body.classList.toggle("clipped");
-      };
-    }
-    if (state.view === "skills") {
-      card.querySelector(".pick").onclick = () => {
-        const key = skillKey(r);
-        state.picked.has(key) ? state.picked.delete(key) : state.picked.add(key);
-        render();
-      };
-    }
-    grid.appendChild(card);
-  }
-  renderStack();
+  shown.forEach((s, i) => grid.appendChild(skillRow(s, i + 1)));
 }
 
-function escapeHtml(s) {
-  return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function skillRow(s, rank) {
+  const key = skillKey(s);
+  const picked = state.picked.has(key);
+  const row = document.createElement("article");
+  row.className = "row cols" + (picked ? " picked" : "") + (state.open.has(key) ? " open" : "");
+  row.setAttribute("role", "listitem");
+  row.dataset.key = key;
+  const link = bodyLink(s);
+  row.innerHTML = `
+    <label class="pickcell"><input type="checkbox" class="pick" aria-label="Pick ${escapeHtml(s.name)}"${picked ? " checked" : ""}></label>
+    <span class="rank">${rank}</span>
+    <div class="ident">
+      <div class="line">
+        <h4>${escapeHtml(s.name)}</h4>
+        <span class="src">${escapeHtml(s.source)}</span>
+        ${s.lint.map(c => `<span class="pill lint" title="Fails the ${escapeHtml(c)} lint check">${escapeHtml(c)}</span>`).join("")}
+      </div>
+      <p>${escapeHtml(s.description || "")}</p>
+    </div>
+    <div class="costs">
+      <div class="catcell"><button type="button" class="pill cat" title="Show only ${escapeHtml(s.category)}">${escapeHtml(s.category)}</button></div>
+      <span class="num on" data-label="always-on">+${s.tokensAlwaysOn}</span>
+      <span class="num" data-label="when it fires">${k(s.tokensOnInvoke)}</span>
+      ${s.bundledFiles
+        ? `<span class="num" data-label="bundled" title="${s.bundledFiles} file${s.bundledFiles === 1 ? "" : "s"} beside SKILL.md, each read only if the body sends the skill to it">${s.bundledFiles} · ≤${k(s.tokensBundledMax)}</span>`
+        : '<span class="num dim" data-label="bundled">—</span>'}
+    </div>
+    <button type="button" class="more" aria-expanded="${state.open.has(key)}" aria-label="Details for ${escapeHtml(s.name)}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="detail">
+      <dl>
+        <dt>Path</dt><dd>${escapeHtml(s.source)} / ${escapeHtml(s.path)}</dd>
+        <dt>Shipped by</dt><dd>${s.plugins.length ? s.plugins.map(p => `<span class="pill">${escapeHtml(p)}</span>`).join("") : "no plugin"}</dd>
+        ${(s.tags || []).length ? `<dt>Tags</dt><dd>${s.tags.map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("")}</dd>` : ""}
+        ${s.lint.length ? `<dt>Lint</dt><dd>${s.lint.map(c => `<span class="pill lint">${escapeHtml(c)}</span>`).join("")}</dd>` : ""}
+        <dt>Cost</dt><dd>+${s.tokensAlwaysOn} tokens every session · ${s.tokensOnInvoke.toLocaleString()} when it fires${s.bundledFiles ? ` · up to ${s.tokensBundledMax.toLocaleString()} across ${s.bundledFiles} bundled file${s.bundledFiles === 1 ? "" : "s"}` : ""}</dd>
+      </dl>
+      <div class="acts">
+        <button type="button" class="btn pickbtn">${picked ? "Remove from stack" : "Add to stack"}</button>
+        ${link ? `<a class="btn" href="${escapeHtml(link)}" target="_blank" rel="noopener">Open SKILL.md ↗</a>` : ""}
+      </div>
+    </div>`;
+  row.querySelector(".pick").addEventListener("change", () => togglePick(key));
+  row.querySelector(".pickbtn").onclick = () => togglePick(key);
+  row.querySelector(".pill.cat").onclick = () => { state.cat = s.category; writeUrl(); render(); };
+  row.addEventListener("click", e => {
+    if (e.target.closest("a, button, input, label, .detail, pre")) return;
+    if (getSelection().toString()) return;
+    toggleOpen(key);
+  });
+  row.querySelector(".more").onclick = () => toggleOpen(key);
+  return row;
+}
+
+function toggleOpen(key) {
+  state.open.has(key) ? state.open.delete(key) : state.open.add(key);
+  const row = document.querySelector(`.row[data-key="${CSS.escape(key)}"]`);
+  if (!row) return;
+  row.classList.toggle("open", state.open.has(key));
+  row.querySelector(".more").setAttribute("aria-expanded", state.open.has(key));
+}
+
+function bodyLink(s) {
+  // A source with neither a public pin nor a local checkout has nowhere to
+  // resolve a body from, and the catalog omits `body` for it.
+  const src = state.data.sources[s.source];
+  if (!src || !src.body) return null;
+  const base = src.body.startsWith(RAW_GITHUB)
+    ? src.body.replace(RAW_GITHUB, "https://github.com/").replace(/^(https:\/\/github\.com\/[^/]+\/[^/]+\/)/, "$1blob/")
+    : src.body;
+  return base + s.path + "/SKILL.md";
+}
+
+function renderPlugins() {
+  const rows = state.data.plugins.filter(matchesPlugin);
+  $("pempty").hidden = rows.length > 0;
+  const grid = $("pgrid");
+  grid.innerHTML = "";
+  for (const p of rows) {
+    const row = document.createElement("article");
+    row.className = "row plugin pcols";
+    row.setAttribute("role", "listitem");
+    const cmd = `claude plugin install ${p.name}@${state.data.registry}`;
+    row.innerHTML = `
+      <div class="ident">
+        <div class="line">
+          <h4>${escapeHtml(p.name)}</h4>
+          ${p.version ? `<span class="pill ver">v${escapeHtml(p.version)}</span>` : ""}
+          ${p.curated ? '<span class="pill ok" title="Cherry-picks skills out of its source instead of shipping the whole repo">curated</span>' : ""}
+        </div>
+        <p>${escapeHtml(p.description || "")}</p>
+        <div class="meta">
+          <span class="src">from ${escapeHtml(p.source)}</span>
+          ${p.category ? `<span class="pill">${escapeHtml(p.category)}</span>` : ""}
+          ${(p.tags || []).map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("")}
+          ${p.homepage ? `<a class="src" href="${escapeHtml(p.homepage)}" target="_blank" rel="noopener">homepage ↗</a>` : ""}
+        </div>
+      </div>
+      <button type="button" class="tolist">${p.skills ?? 0} skill${p.skills === 1 ? "" : "s"} →</button>
+      <div class="install"><code>${escapeHtml(cmd)}</code><button type="button">Copy</button></div>`;
+    row.querySelector(".tolist").onclick = () => { state.plug = p.name; state.view = "skills"; writeUrl(true); render(); scrollTo({ top: 0 }); };
+    const copyBtn = row.querySelector(".install button");
+    copyBtn.onclick = () => copyText(cmd, copyBtn, "Copy");
+    grid.appendChild(row);
+  }
+}
+
+function renderAtlasView(shown, total) {
+  const filtered = shown.length !== total;
+  $("atotals").innerHTML = `A radial map of the catalog, grouped by category. Showing <b>${shown.length}</b> of <b>${total}</b> skills` +
+    (filtered ? ', narrowed by the filters on Skills. <button type="button" id="atlas-reset" class="chip">Clear the filters</button>' : ".");
+  if (filtered) $("atlas-reset").onclick = $("reset").onclick;
+  renderAtlas(shown);
 }
 
 function renderStack() {
   const chosen = state.data.skills.filter(s => state.picked.has(skillKey(s)));
   $("stack").classList.toggle("hidden", chosen.length === 0);
+  $("showpicked").setAttribute("aria-pressed", state.flag === "picked");
   if (!chosen.length) return;
-  $("stackcount").textContent = `${chosen.length} skills`;
+  const on = chosen.reduce((n, s) => n + s.tokensAlwaysOn, 0);
+  $("stackcount").innerHTML = `${chosen.length} skill${chosen.length === 1 ? "" : "s"} · <em>+${on.toLocaleString()}</em> always-on`;
   $("snippet").textContent = bundleYaml(chosen);
 }
 
@@ -405,6 +760,17 @@ function bundleYaml(chosen) {
     for (const p of bySource[source].sort()) lines.push(`      - ${p}`);
   }
   return lines.join("\n");
+}
+
+function copyText(text, button, label) {
+  navigator.clipboard.writeText(text).then(() => {
+    button.textContent = "Copied";
+    setTimeout(() => { button.textContent = label; }, 1200);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
 
 /* ---------- atlas ---------- */
@@ -470,7 +836,7 @@ function buildMap(skills) {
     const cflip = Math.cos(mid) < 0;
     const ctp = polar(mid, MAP_R1 + 14);
     const label = `${escapeHtml(g.c.label).toUpperCase()} <tspan class="cnt">· ${g.skills.length}</tspan>`;
-    parts.push(`<g class="cnode" data-c="${g.c.id}" role="button" aria-label="${escapeHtml(g.c.label)}">` +
+    parts.push(`<g class="cnode" data-c="${escapeHtml(g.c.id)}" role="button" aria-label="${escapeHtml(g.c.label)}">` +
       `<rect x="${(cp[0] - 3.5).toFixed(1)}" y="${(cp[1] - 3.5).toFixed(1)}" width="7" height="7"/>` +
       `<text x="${ctp[0].toFixed(1)}" y="${ctp[1].toFixed(1)}" dominant-baseline="middle" text-anchor="${cflip ? "end" : "start"}" ` +
       `transform="rotate(${(cflip ? cdeg + 180 : cdeg).toFixed(1)} ${ctp[0].toFixed(1)} ${ctp[1].toFixed(1)})">${isCol ? "▸ " : ""}${label}</text></g>`);
@@ -547,11 +913,7 @@ function attachAtlasEvents(skills) {
         render();
       } else {
         const g = drag.target.closest ? drag.target.closest("g.leaf") : null;
-        if (g) {
-          const key = g.getAttribute("data-key");
-          state.picked.has(key) ? state.picked.delete(key) : state.picked.add(key);
-          render();
-        }
+        if (g) togglePick(g.getAttribute("data-key"));
       }
     }
     drag = null;
@@ -638,6 +1000,7 @@ function buildCloud(skills) {
       const val = $("q").value.toLowerCase() === w ? "" : w;
       $("q").value = val;
       state.q = val;
+      writeUrl();
       render();
     };
   });
@@ -646,14 +1009,8 @@ function buildCloud(skills) {
 addEventListener("resize", () => {
   if (state.view !== "atlas" || !state.data) return;
   clearTimeout(atlas.resizeTimer);
-  atlas.resizeTimer = setTimeout(() => buildCloud(state.data.skills.filter(matches)), 200);
+  atlas.resizeTimer = setTimeout(() => buildCloud(sortSkills(state.data.skills.filter(matches))), 200);
 });
-
-function copyBundle() {
-  navigator.clipboard.writeText($("snippet").textContent).then(() => {
-    const b = $("copy"); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy bundle", 1200);
-  });
-}
 </script>
 </body>
 </html>
