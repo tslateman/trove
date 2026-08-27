@@ -6,24 +6,24 @@ viewport:
 cursor: true
 javascript: |
   navigator.clipboard.writeText = (text) => { window.__copied = text; return Promise.resolve(); }
-wait_for: "article.card >> nth=0"
+wait_for: "article.row >> nth=0"
 scenes:
   - name: Open the catalog
     do:
       - pause: 2.5
   - name: Narrow to one category
     do:
-      - click: "#f-cat button >> nth=0"
+      - click: "#f-cat button >> nth=1"
       - wait_for: "#f-cat button[aria-pressed=true]"
       - pause: 1.5
   - name: Pick three skills and watch the stack grow
     do:
-      - click: "article.card >> nth=0 >> .pick"
-      - wait_for: "#stackcount:has-text('1 skills')"
+      - click: "article.row >> nth=0 >> .pick"
+      - wait_for: "#stackcount:has-text('1 skill')"
       - pause: 0.8
-      - click: "article.card >> nth=1 >> .pick"
+      - click: "article.row >> nth=1 >> .pick"
       - pause: 0.8
-      - click: "article.card >> nth=2 >> .pick"
+      - click: "article.row >> nth=2 >> .pick"
       - wait_for: "#stackcount:has-text('3 skills')"
       - pause: 3.5
   - name: Copy the generated bundle

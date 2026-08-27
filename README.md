@@ -2,7 +2,7 @@
 
 A registry for Claude Code skills. Author skills in whatever repo owns them,
 compose them into bundles, publish a marketplace, and browse the catalog with
-token cost on every card.
+token cost on every row.
 
 ![Filtering the catalog to one category, picking three skills, and copying the bundle they generate](docs/demo.gif)
 
@@ -142,10 +142,10 @@ a plugin block per source, each scoped to only the skills you picked from it.
 The Atlas tab is a third way to read the catalog, beside Skills and Plugins: a
 radial map grouping every skill by category, and a word cloud of the
 registry's vocabulary sized by how many skills carry each word. Both read the
-same data the cards do, so there is nothing new to build or configure.
+same data the Skills list does, so there is nothing new to build or configure.
 
 Dragging pans the map and scrolling zooms it. Clicking a branch folds it.
-Clicking a skill picks it, same as the checkbox on its card, so a stack built
+Clicking a skill picks it, same as the checkbox on its row, so a stack built
 from the atlas is the same stack the Skills tab shows. Clicking a cloud word
 sets the search box, which narrows both views at once.
 
@@ -182,7 +182,7 @@ file only if the body sends it there.
 The bundled number is a ceiling, written `≤`: it assumes the skill reads every
 file it ships, which a skill that branches over its references never does.
 
-![Searching for visual-plan: its card shows three separate prices — always-on, when it fires, and 9 files · ≤25.7k if read](docs/demo-bundled.gif)
+![Searching for visual-plan: its row shows three separate prices, always-on, when it fires, and bundled, 9 · ≤25.7k](docs/demo-bundled.gif)
 
 An always-on figure is a ceiling too. Claude Code caps the whole skill listing
 at `skillListingBudgetFraction` of the context window, 1% by default, and
@@ -294,7 +294,7 @@ that stops a skill from being chosen or from being read as written.
 Each finding rides on the skill in `catalog.json` as `lint`, so the catalog
 filters and flags them too. `trove lint` exits 1 when anything is flagged.
 
-![Filtering the catalog by the lint flag: the grid narrows to flagged skills, each card naming which check it failed, such as trigger](docs/demo-lint.gif)
+![Filtering the catalog by the lint flag: the list narrows to flagged skills, each row naming which check it failed, such as trigger](docs/demo-lint.gif)
 
 Rules stop there on purpose. A rule that fires on a third of a real registry
 teaches people to ignore the linter, so a check earns its place by what it
@@ -331,11 +331,13 @@ just demo      # record an mp4 walkthrough of the catalog
 ```
 
 `just verify` serves the site and drives it in headless Chromium. It fails if
-the card count drifts from the catalog, a console error fires, the stack count
+the row count drifts from the catalog, a console error fires, the stack count
 doesn't update after picking a skill, the generated bundle omits a picked
-skill, the atlas leaf count drifts from the catalog, a leaf pick doesn't carry
-over to Skills, the page scrolls sideways at 390px, both themes paint the same
-background, or a hostile skill name survives into the DOM as a live element.
+skill, sorting by always-on leaves the column unordered, a filter or sort fails
+to reach the URL, the atlas leaf count drifts from the catalog, a leaf pick
+doesn't carry over to Skills, the page scrolls sideways at 390px, both themes
+paint the same background, or a hostile skill name survives into the DOM as a
+live element.
 
 `just demo` drives the same page through `scripts/demo.yml` and writes
 `out/demo.mp4`. Every step waits on the state it expects, so a recording that
@@ -345,7 +347,7 @@ finishes is also a passing run. It needs `shot-scraper`:
 uv tool install shot-scraper && shot-scraper install
 ```
 
-The storyboard picks cards by position rather than by name, so it records
+The storyboard picks rows by position rather than by name, so it records
 whatever bundle built the catalog. Headless Chromium refuses clipboard writes,
 so the storyboard replaces `navigator.clipboard.writeText` with a stub and then
 asserts the app handed it the generated bundle.

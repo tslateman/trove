@@ -21,7 +21,11 @@ def find_browser() -> str | None:
     return str(candidates[-1]) if candidates else None
 
 
-def launch(playwright, executable: str | None):
+def launch(playwright):
+    """Prefer the build the installed Playwright expects; fall back to any cached one."""
+    if Path(playwright.chromium.executable_path).exists():
+        return playwright.chromium.launch()
+    executable = find_browser()
     if executable:
         return playwright.chromium.launch(executable_path=executable)
     return playwright.chromium.launch()
@@ -31,9 +35,9 @@ XSS_PROBE = """() => {
   const probe = '<img src=x onerror="window.__pwned=1">';
   state.data.skills.push({name: probe, description: probe, category: probe, tags: [probe],
     path: 'probe', source: 'probe', tokensAlwaysOn: 1, tokensOnInvoke: 1,
-    bundledFiles: 1, tokensBundledMax: 1, categoryIsFallback: false, lint: [probe], plugins: ['probe']});
+    bundledFiles: 1, tokensBundledMax: 1, categoryIsFallback: false, lint: [probe], plugins: [probe]});
   render();
-  const injected = document.querySelectorAll('.grid img, aside img').length;
+  const injected = document.querySelectorAll('main img, #stack img').length;
   state.data.skills.pop();
   render();
   return injected;
@@ -49,10 +53,10 @@ TWIN_PROBE = """() => {
   const saved = [...state.picked];
   state.picked.clear();
   render();
-  [...document.querySelectorAll('.card')]
+  [...document.querySelectorAll('.row')]
     .find(c => c.querySelector('h4').textContent === 'twin')
     .querySelector('.pick').click();
-  const picked = document.querySelectorAll('.card.picked').length;
+  const picked = document.querySelectorAll('.row.picked').length;
   state.picked.clear();
   saved.forEach(k => state.picked.add(k));
   state.data.skills.pop();
@@ -60,6 +64,11 @@ TWIN_PROBE = """() => {
   render();
   return picked;
 }"""
+
+ALWAYS_ON_COLUMN = (
+    "() => [...document.querySelectorAll('.row .num.on')]"
+    ".map(n => parseInt(n.textContent.replace('+', ''), 10))"
+)
 
 
 def check(
@@ -71,33 +80,34 @@ def check(
     page.on("pageerror", lambda e: console.append(str(e)))
 
     page.goto(url, wait_until="networkidle")
-    page.wait_for_selector(".card", timeout=8000)
+    page.wait_for_selector(".row", timeout=8000)
 
-    cards = page.locator(".card").count()
-    if cards != expected_skills:
+    rows = page.locator(".row").count()
+    if rows != expected_skills:
         problems.append(
-            f"[{theme}] rendered {cards} cards, catalog has {expected_skills}"
+            f"[{theme}] rendered {rows} rows, catalog has {expected_skills}"
         )
 
     served = page.evaluate("() => state.data.skills.map(s => [s.name, s.description])")
     rendered = page.evaluate(
-        "() => [...document.querySelectorAll('.card')].map("
+        "() => [...document.querySelectorAll('.row')].map("
         "c => [c.querySelector('h4').textContent, c.querySelector('p').textContent])"
     )
     if served[: len(rendered)] != rendered:
         first = next((i for i, (a, b) in enumerate(zip(served, rendered)) if a != b), 0)
         problems.append(
-            f"[{theme}] card {first} renders {rendered[first]!r} but the catalog says "
+            f"[{theme}] row {first} renders {rendered[first]!r} but the catalog says "
             f"{served[first]!r} — the page is stale or mis-binding"
         )
-    if page.locator("#f-cat button").count() == 0:
-        problems.append(f"[{theme}] no category facets rendered")
-    page.locator(".card .pick").first.click()
+    if page.locator("#f-cat button").count() < 2:
+        problems.append(f"[{theme}] no category tiles rendered beside All")
+
+    page.locator(".row .pick").first.click()
     page.wait_for_selector(".stack:not(.hidden)", timeout=3000)
     if "1" not in page.locator("#stackcount").inner_text():
         problems.append(f"[{theme}] stack count did not update after picking a skill")
     snippet = page.locator("#snippet").inner_text()
-    picked = page.locator(".card.picked h4").first.inner_text()
+    picked = page.locator(".row.picked h4").first.inner_text()
     for fragment in ("- name:", "source:", "skills:"):
         if fragment not in snippet:
             problems.append(f"[{theme}] bundle snippet is missing {fragment!r}")
@@ -106,6 +116,41 @@ def check(
 
     page.click("#clear")
     page.wait_for_timeout(200)
+    if page.locator(".stack:not(.hidden)").count():
+        problems.append(f"[{theme}] the stack tray stayed open after Clear")
+
+    page.locator(".row .more").first.click()
+    page.wait_for_timeout(100)
+    if not page.locator(".row.open .detail").first.is_visible():
+        problems.append(f"[{theme}] expanding a row did not reveal its detail")
+    page.locator(".row .more").first.click()
+
+    page.click("#listhead button[data-sort=on]")
+    page.wait_for_timeout(100)
+    costs = page.evaluate(ALWAYS_ON_COLUMN)
+    if costs != sorted(costs, reverse=True):
+        problems.append(
+            f"[{theme}] sorting by always-on did not order the column: {costs[:5]}"
+        )
+    if "sort=on" not in page.url:
+        problems.append(f"[{theme}] the sort did not reach the URL: {page.url}")
+    page.click("#listhead button[data-sort=name]")
+    page.wait_for_timeout(100)
+
+    page.locator("#f-cat button").nth(1).click()
+    page.wait_for_timeout(100)
+    narrowed = page.locator(".row").count()
+    if not (0 < narrowed < expected_skills) and expected_skills > 1:
+        problems.append(
+            f"[{theme}] a category tile did not narrow the list ({narrowed})"
+        )
+    if "cat=" not in page.url:
+        problems.append(
+            f"[{theme}] the category filter did not reach the URL: {page.url}"
+        )
+    page.locator("#f-cat button").nth(0).click()
+    page.wait_for_timeout(100)
+
     page.click("#t-atlas")
     page.wait_for_selector("#mapbox svg", timeout=5000)
     leaves = page.locator("#mapbox g.leaf").count()
@@ -124,44 +169,52 @@ def check(
         )
     page.click("#t-skills")
     page.wait_for_timeout(200)
-    if page.locator("article.card.picked").count() == 0:
+    if page.locator("article.row.picked").count() == 0:
         problems.append(
             f"[{theme}] a pick made in the atlas did not carry over to Skills view"
         )
+    page.click("#clear")
+    page.wait_for_timeout(100)
 
     page.click("#t-plugins")
     page.wait_for_timeout(200)
-    inert = page.evaluate(
-        "document.getElementById('sidebar').classList.contains('inert')"
-    )
-    if not inert:
-        problems.append(f"[{theme}] sidebar did not go inert on the Plugins tab")
-    pointer_events = page.evaluate(
-        "getComputedStyle(document.querySelector('#f-cat button')).pointerEvents"
-    )
-    if pointer_events != "none":
+    if not page.evaluate("document.getElementById('view-skills').hidden"):
         problems.append(
-            f"[{theme}] category facet is still clickable on Plugins (pointer-events: {pointer_events})"
+            f"[{theme}] the Skills section stayed visible on the Plugins tab"
         )
-    all_plugins = page.locator("article.card").count()
+    if page.locator("#f-cat button").first.is_visible():
+        problems.append(f"[{theme}] category tiles are still visible on Plugins")
+    all_plugins = page.locator("article.row").count()
     page.fill("#q", "review")
     page.wait_for_timeout(200)
-    filtered_plugins = page.locator("article.card").count()
+    filtered_plugins = page.locator("article.row").count()
     if not (0 < filtered_plugins < all_plugins):
         problems.append(
             f"[{theme}] search did not narrow the Plugins list ({all_plugins} -> {filtered_plugins})"
         )
     page.fill("#q", "")
     page.wait_for_timeout(200)
-    page.click("#t-skills")
+    page.locator("article.row .tolist").first.click()
     page.wait_for_timeout(200)
-    if page.evaluate("document.getElementById('sidebar').classList.contains('inert')"):
-        problems.append(f"[{theme}] sidebar stayed inert after returning to Skills")
+    if page.evaluate("document.getElementById('view-skills').hidden"):
+        problems.append(
+            f"[{theme}] a plugin's skill count did not jump to the Skills list"
+        )
+    if "plugin=" not in page.url:
+        problems.append(
+            f"[{theme}] jumping from a plugin did not filter by it: {page.url}"
+        )
+    if page.locator("#f-plug button[aria-pressed=true]").count() != 1:
+        problems.append(f"[{theme}] the plugin chip did not light up after the jump")
+    page.click("#showing-reset")
+    page.wait_for_timeout(100)
 
     page.fill("#q", "zzzznomatch")
     page.wait_for_timeout(200)
-    if page.locator(".card").count() != 0:
+    if page.locator(".row").count() != 0:
         problems.append(f"[{theme}] search did not filter to zero on a nonsense query")
+    if not page.locator("#empty").is_visible():
+        problems.append(f"[{theme}] the empty state did not show on a nonsense query")
     page.fill("#q", "")
     page.wait_for_timeout(200)
 
@@ -175,7 +228,7 @@ def check(
     twin_picked = page.evaluate(TWIN_PROBE)
     if twin_picked != 1:
         problems.append(
-            f"[{theme}] picking one of two same-named skills marked {twin_picked} cards — "
+            f"[{theme}] picking one of two same-named skills marked {twin_picked} rows — "
             "the picker is keying on name alone"
         )
 
@@ -184,7 +237,12 @@ def check(
         problems.append(f"[{theme}] console errors: {console}")
 
     if shots:
+        page.locator(".row .pick").nth(0).click()
+        page.locator(".row .pick").nth(1).click()
+        page.locator(".row .more").nth(2).click()
+        page.wait_for_timeout(300)
         page.screenshot(path=str(shots / f"catalog-{theme}.png"))
+        page.click("#clear")
     return problems, background
 
 
@@ -204,7 +262,7 @@ def main() -> int:
     problems: list[str] = []
     backgrounds = {}
     with sync_playwright() as p:
-        browser = launch(p, find_browser())
+        browser = launch(p)
         for theme in ("light", "dark"):
             page = browser.new_page(
                 viewport={"width": 1340, "height": 940}, color_scheme=theme
@@ -215,12 +273,16 @@ def main() -> int:
 
         narrow = browser.new_page(viewport={"width": 390, "height": 800})
         narrow.goto(url, wait_until="networkidle")
-        narrow.wait_for_selector(".card")
+        narrow.wait_for_selector(".row")
+        narrow.locator(".row .pick").first.click()
+        narrow.wait_for_selector(".stack:not(.hidden)", timeout=3000)
         overflow = narrow.evaluate(
             "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
         )
         if overflow > 0:
             problems.append(f"[390px] page scrolls sideways by {overflow}px")
+        if shots := args.shots:
+            narrow.screenshot(path=str(shots / "catalog-narrow.png"), full_page=True)
         narrow.close()
         browser.close()
 
@@ -235,7 +297,7 @@ def main() -> int:
         return 1
     print(
         f"ui ok: {expected} skills, both themes distinct, no sideways scroll at 390px, "
-        "picking, search, and hostile-input escaping verified"
+        "picking, sorting, filtering, search, and hostile-input escaping verified"
     )
     return 0
 
