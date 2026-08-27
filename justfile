@@ -169,10 +169,12 @@ gifs:
     #!/usr/bin/env bash
     set -euo pipefail
     command -v ffmpeg >/dev/null || { echo "gifs needs ffmpeg on PATH" >&2; exit 1; }
-    for story in demo demo-curated demo-mixing demo-atlas demo-bundled demo-lint; do
+    for story in demo demo-curated demo-mixing demo-atlas demo-bundled; do
       just --set bundle bundles/registry.yaml --set port {{ port }} demo "scripts/$story.yml" "{{ out }}/$story.mp4"
       ffmpeg -y -loglevel error -i "{{ out }}/$story.mp4" -vf "{{ gif_filter }}" "docs/$story.gif"
     done
+    just --set bundle bundles/lint.yaml --set port {{ port }} demo scripts/demo-lint.yml {{ out }}/demo-lint.mp4
+    ffmpeg -y -loglevel error -i {{ out }}/demo-lint.mp4 -vf "{{ gif_filter }}" docs/demo-lint.gif
     just --set bundle bundles/twins.yaml --set port {{ port }} demo scripts/demo-twins.yml {{ out }}/demo-twins.mp4
     ffmpeg -y -loglevel error -i {{ out }}/demo-twins.mp4 -vf "{{ gif_filter }}" docs/demo-twins.gif
     ls -la docs/*.gif
