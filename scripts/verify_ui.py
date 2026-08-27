@@ -31,7 +31,7 @@ XSS_PROBE = """() => {
   const probe = '<img src=x onerror="window.__pwned=1">';
   state.data.skills.push({name: probe, description: probe, category: probe, tags: [probe],
     path: 'probe', source: 'probe', tokensAlwaysOn: 1, tokensOnInvoke: 1,
-    bundledFiles: 1, tokensBundledMax: 1, lint: [probe], plugins: ['probe']});
+    bundledFiles: 1, tokensBundledMax: 1, categoryIsFallback: false, lint: [probe], plugins: ['probe']});
   render();
   const injected = document.querySelectorAll('.grid img, aside img').length;
   state.data.skills.pop();
@@ -128,6 +128,35 @@ def check(
         problems.append(
             f"[{theme}] a pick made in the atlas did not carry over to Skills view"
         )
+
+    page.click("#t-plugins")
+    page.wait_for_timeout(200)
+    inert = page.evaluate(
+        "document.getElementById('sidebar').classList.contains('inert')"
+    )
+    if not inert:
+        problems.append(f"[{theme}] sidebar did not go inert on the Plugins tab")
+    pointer_events = page.evaluate(
+        "getComputedStyle(document.querySelector('#f-cat button')).pointerEvents"
+    )
+    if pointer_events != "none":
+        problems.append(
+            f"[{theme}] category facet is still clickable on Plugins (pointer-events: {pointer_events})"
+        )
+    all_plugins = page.locator("article.card").count()
+    page.fill("#q", "review")
+    page.wait_for_timeout(200)
+    filtered_plugins = page.locator("article.card").count()
+    if not (0 < filtered_plugins < all_plugins):
+        problems.append(
+            f"[{theme}] search did not narrow the Plugins list ({all_plugins} -> {filtered_plugins})"
+        )
+    page.fill("#q", "")
+    page.wait_for_timeout(200)
+    page.click("#t-skills")
+    page.wait_for_timeout(200)
+    if page.evaluate("document.getElementById('sidebar').classList.contains('inert')"):
+        problems.append(f"[{theme}] sidebar stayed inert after returning to Skills")
 
     page.fill("#q", "zzzznomatch")
     page.wait_for_timeout(200)
