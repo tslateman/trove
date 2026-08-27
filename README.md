@@ -225,7 +225,7 @@ silently. Under `--offline` it stays a hard error.
 
 ## Reading without installing
 
-`skills/trove` is a bridge: install that one skill and a session can list every
+`skills/trove` is a reader: install that one skill and a session can list every
 skill in the catalog, read one body, and pull one bundled file, paying for what
 it opens instead of for what exists. It costs 111 tokens always-on against the
 7,853 that installing every plugin in the registry this repo publishes costs
@@ -254,7 +254,7 @@ jq -r '.sources' out/catalog.json
 ```
 
 A pinned GitHub source resolves to raw git at that commit, so the published
-bridge needs no server: a session depends on the host of the catalog and on
+reader needs no server: a session depends on the host of the catalog and on
 GitHub. Every other source resolves to `body/<source>/`, which `trove serve`
 answers from the checkout on disk. That covers a source before it is pushed, one
 with no pin, and one behind a host that serves no raw URL. Reading through
