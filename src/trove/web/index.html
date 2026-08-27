@@ -131,6 +131,46 @@ aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh -
   color: var(--ink); padding: 7px; font: inherit; font-size: 12.5px; cursor: pointer; }
 .stack .row button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 .empty { padding: 60px 0; text-align: center; color: var(--muted); }
+
+.atlas.hidden { display: none; }
+.mapnote { font: 12px/1.5 var(--mono); color: var(--muted); margin: 0 0 12px; }
+.duo { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; align-items: stretch; }
+@media (max-width: 900px) { .duo { grid-template-columns: 1fr; } }
+.mapbox { position: relative; border: 1px solid var(--line); border-radius: 13px; background: var(--panel);
+  box-shadow: var(--shadow); overflow: hidden; }
+.mapbox svg { display: block; width: 100%; height: 66vh; min-height: 460px; max-height: 720px; cursor: grab; }
+.mapbox svg.panning { cursor: grabbing; }
+.map-edge { stroke: var(--line); fill: none; stroke-width: 1; }
+.map-spoke { stroke: var(--line); stroke-width: 1; }
+.leaf circle { fill: var(--muted); }
+.leaf.flagged circle { fill: var(--warn); }
+.leaf text { font: 12px/1 var(--mono); fill: var(--muted); cursor: pointer; }
+.leaf:hover text, .leaf.sel text { fill: var(--accent); }
+.leaf.sel circle { fill: var(--accent); }
+.cnode text { font: 700 14px/1 var(--mono); letter-spacing: .08em; fill: var(--ink); cursor: pointer;
+  paint-order: stroke; stroke: var(--panel); stroke-width: 6px; stroke-linejoin: round; }
+.cnode .cnt { font-weight: 400; fill: var(--muted); letter-spacing: 0; }
+.cnode rect { fill: var(--muted); }
+.cnode:hover text { fill: var(--accent); }
+.root-label { font: 700 17px/1 var(--mono); letter-spacing: .14em; fill: var(--accent); }
+.root-count { font: 12px/1 var(--mono); fill: var(--muted); }
+.leaf, .cw { transition: opacity .15s ease; }
+@media (prefers-reduced-motion: reduce) { .leaf, .cw { transition: none; } }
+
+.tooltip { position: absolute; pointer-events: none; z-index: 5; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: var(--shadow); padding: 8px 11px; max-width: 300px; font-size: 12.5px; display: none; }
+.tooltip .tn { font: 700 12px/1 var(--mono); color: var(--accent); }
+.tooltip .to { font: 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 3px 0 4px; }
+.tooltip .th { color: var(--muted); line-height: 1.45; }
+.tooltip .tt { color: var(--ok); font: 11px/1 var(--mono); margin-top: 4px; }
+
+.cloudbox { position: relative; border: 1px solid var(--line); border-radius: 13px; background: var(--panel);
+  box-shadow: var(--shadow); height: 460px; overflow: hidden; }
+.cw { position: absolute; font-weight: 600; color: var(--muted); background: none; border: none; padding: 0;
+  cursor: pointer; line-height: 1; white-space: nowrap; }
+.cw.big { color: var(--ink); font-weight: 700; }
+.cw:hover { color: var(--accent); }
+.cw.active { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
 </style>
 </head>
 <body>
@@ -157,11 +197,20 @@ aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh -
     <div class="tabs">
       <button id="t-skills" aria-pressed="true">Skills</button>
       <button id="t-plugins" aria-pressed="false">Plugins</button>
+      <button id="t-atlas" aria-pressed="false">Atlas</button>
     </div>
     <p class="legend" id="legend">Only <b>always-on</b> is charged every session. A body loads
       when the skill fires, and a bundled file only if the body sends it there.</p>
     <div class="grid" id="grid"></div>
     <div class="empty" id="empty" hidden>Nothing matches.</div>
+    <div class="atlas hidden" id="atlas">
+      <p class="mapnote">Drag to pan, scroll to zoom, click a branch to fold it, click a skill to
+        pick it. Search and picks stay in sync with Skills.</p>
+      <div class="duo">
+        <div class="mapbox" id="mapbox"><div class="tooltip" id="tooltip"></div></div>
+        <div class="cloudbox" id="cloudbox"></div>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -191,6 +240,7 @@ function boot() {
   $("q").addEventListener("input", e => { state.q = e.target.value.toLowerCase(); render(); });
   $("t-skills").onclick = () => setView("skills");
   $("t-plugins").onclick = () => setView("plugins");
+  $("t-atlas").onclick = () => setView("atlas");
   $("clear").onclick = () => { state.picked.clear(); render(); };
   $("copy").onclick = copyBundle;
   $("theme").onclick = toggleTheme;
@@ -211,7 +261,10 @@ function setView(v) {
   state.view = v;
   $("t-skills").setAttribute("aria-pressed", v === "skills");
   $("t-plugins").setAttribute("aria-pressed", v === "plugins");
+  $("t-atlas").setAttribute("aria-pressed", v === "atlas");
   $("legend").hidden = v !== "skills";
+  $("grid").style.display = v === "atlas" ? "none" : "";
+  $("atlas").classList.toggle("hidden", v !== "atlas");
   render();
 }
 
@@ -248,6 +301,14 @@ function render() {
     ["lint", skills.filter(s => s.lint.length).length],
     ["picked", state.picked.size],
   ], "flag");
+
+  if (state.view === "atlas") {
+    const shown = skills.filter(matches);
+    $("empty").hidden = shown.length > 0;
+    renderAtlas(shown);
+    renderStack();
+    return;
+  }
 
   const grid = $("grid");
   grid.innerHTML = "";
@@ -320,6 +381,248 @@ function bundleYaml(chosen) {
   }
   return lines.join("\n");
 }
+
+/* ---------- atlas ---------- */
+const atlas = { collapsed: {}, view: { x: 0, y: 0, k: 1 }, svgEl: null, vpEl: null, resizeTimer: null };
+const MAP_W = 1700, MAP_CX = MAP_W / 2, MAP_CY = MAP_W / 2, MAP_R1 = 190, MAP_R2 = 620;
+const ATLAS_STOP = new Set(
+  ("a an and are as at be by do for from how in into is it its no not of on one or out over per " +
+    "the this that to use via what when with your my you we our their vs new all any only also " +
+    "after before never each more most much skills skill claude").split(" ")
+);
+
+function polar(a, r) { return [MAP_CX + Math.cos(a) * r, MAP_CY + Math.sin(a) * r]; }
+
+function atlasClusters(skills) {
+  const counts = new Map();
+  for (const s of skills) counts.set(s.category, (counts.get(s.category) || 0) + 1);
+  const sorted = [...counts].sort((a, b) => b[1] - a[1]);
+  const kept = new Set(sorted.slice(0, 13).map(([id]) => id));
+  const clusters = sorted.slice(0, 13).map(([id]) => ({ id, label: id }));
+  if (sorted.length > 13) clusters.push({ id: "__other", label: "other" });
+  const idFor = (cat) => (kept.has(cat) ? cat : "__other");
+  return { clusters, idFor };
+}
+
+function buildMap(skills) {
+  if (!skills.length) {
+    return `<svg viewBox="0 0 ${MAP_W} ${MAP_W}" role="img" aria-label="No skills match">` +
+      `<text class="root-label" x="${MAP_CX}" y="${MAP_CY}" text-anchor="middle">NOTHING MATCHES</text></svg>`;
+  }
+  const { clusters, idFor } = atlasClusters(skills);
+  const groups = clusters.map(c => ({ c, skills: skills.filter(s => idFor(s.category) === c.id) }));
+  let totalSlots = 0;
+  for (const g of groups) { g.slots = atlas.collapsed[g.c.id] ? 2.4 : g.skills.length + 2.4; totalSlots += g.slots; }
+  const unit = (Math.PI * 2) / totalSlots;
+  const parts = [];
+  let acc = -Math.PI / 2;
+  for (const g of groups) {
+    const a0 = acc; acc += g.slots * unit;
+    const mid = a0 + (g.slots * unit) / 2;
+    const cp = polar(mid, MAP_R1);
+    const isCol = atlas.collapsed[g.c.id];
+    const rp0 = polar(mid, 46), rp1 = polar(mid, MAP_R1 - 14);
+    parts.push(`<line class="map-spoke" x1="${rp0[0].toFixed(1)}" y1="${rp0[1].toFixed(1)}" x2="${rp1[0].toFixed(1)}" y2="${rp1[1].toFixed(1)}"/>`);
+    if (!isCol) {
+      g.skills.forEach((s, j) => {
+        const a = a0 + (j + 1.7) * unit;
+        const lp = polar(a, MAP_R2);
+        const rm = (MAP_R1 + MAP_R2) / 2;
+        const c1 = polar(mid, rm), c2 = polar(a, rm);
+        parts.push(`<path class="map-edge" d="M${cp[0].toFixed(1)} ${cp[1].toFixed(1)} C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${lp[0].toFixed(1)} ${lp[1].toFixed(1)}"/>`);
+        const deg = a * 180 / Math.PI;
+        const flip = Math.cos(a) < 0;
+        const tp = polar(a, MAP_R2 + 12);
+        const key = skillKey(s);
+        const cls = "leaf" + (s.lint.length ? " flagged" : "") + (state.picked.has(key) ? " sel" : "");
+        parts.push(`<g class="${cls}" data-key="${escapeHtml(key)}">` +
+          `<circle cx="${lp[0].toFixed(1)}" cy="${lp[1].toFixed(1)}" r="3"/>` +
+          `<text x="${tp[0].toFixed(1)}" y="${tp[1].toFixed(1)}" dominant-baseline="middle" text-anchor="${flip ? "end" : "start"}" ` +
+          `transform="rotate(${(flip ? deg + 180 : deg).toFixed(1)} ${tp[0].toFixed(1)} ${tp[1].toFixed(1)})">${escapeHtml(s.name)}</text></g>`);
+      });
+    }
+    const cdeg = mid * 180 / Math.PI;
+    const cflip = Math.cos(mid) < 0;
+    const ctp = polar(mid, MAP_R1 + 14);
+    const label = `${escapeHtml(g.c.label).toUpperCase()} <tspan class="cnt">· ${g.skills.length}</tspan>`;
+    parts.push(`<g class="cnode" data-c="${g.c.id}" role="button" aria-label="${escapeHtml(g.c.label)}">` +
+      `<rect x="${(cp[0] - 3.5).toFixed(1)}" y="${(cp[1] - 3.5).toFixed(1)}" width="7" height="7"/>` +
+      `<text x="${ctp[0].toFixed(1)}" y="${ctp[1].toFixed(1)}" dominant-baseline="middle" text-anchor="${cflip ? "end" : "start"}" ` +
+      `transform="rotate(${(cflip ? cdeg + 180 : cdeg).toFixed(1)} ${ctp[0].toFixed(1)} ${ctp[1].toFixed(1)})">${isCol ? "▸ " : ""}${label}</text></g>`);
+  }
+  const rootSvg = `<text class="root-label" x="${MAP_CX}" y="${MAP_CY - 4}" text-anchor="middle">SKILLS</text>` +
+    `<text class="root-count" x="${MAP_CX}" y="${MAP_CY + 14}" text-anchor="middle">${skills.length} shown</text>`;
+  return `<svg viewBox="0 0 ${MAP_W} ${MAP_W}" role="img" ` +
+    `aria-label="Radial map of ${skills.length} skills grouped into ${clusters.length} categories" preserveAspectRatio="xMidYMid meet">` +
+    `<g id="atlas-vp">${parts.join("")}${rootSvg}</g></svg>`;
+}
+
+function applyAtlasView() {
+  atlas.vpEl.setAttribute("transform", `translate(${atlas.view.x} ${atlas.view.y}) scale(${atlas.view.k})`);
+}
+
+function renderAtlas(skills) {
+  const mapbox = $("mapbox");
+  const tooltip = $("tooltip");
+  const old = atlas.svgEl;
+  const holder = document.createElement("div");
+  holder.innerHTML = buildMap(skills);
+  atlas.svgEl = holder.firstChild;
+  if (old) old.remove();
+  mapbox.insertBefore(atlas.svgEl, tooltip);
+  atlas.vpEl = atlas.svgEl.querySelector("#atlas-vp");
+  if (atlas.vpEl) applyAtlasView();
+  attachAtlasEvents(skills);
+  buildCloud(skills);
+}
+
+function attachAtlasEvents(skills) {
+  const svgEl = atlas.svgEl;
+  if (!skills.length) return;
+  svgEl.addEventListener("wheel", e => {
+    e.preventDefault();
+    const rect = svgEl.getBoundingClientRect();
+    const scale = Math.min(6, Math.max(0.5, atlas.view.k * (e.deltaY < 0 ? 1.12 : 0.89)));
+    const vw = MAP_W / rect.width;
+    const mx = (e.clientX - rect.left) * vw, my = (e.clientY - rect.top) * vw;
+    atlas.view.x = mx - (mx - atlas.view.x) * (scale / atlas.view.k);
+    atlas.view.y = my - (my - atlas.view.y) * (scale / atlas.view.k);
+    atlas.view.k = scale;
+    applyAtlasView();
+  }, { passive: false });
+  let drag = null;
+  svgEl.addEventListener("pointerdown", e => {
+    drag = { x: e.clientX, y: e.clientY, vx: atlas.view.x, vy: atlas.view.y, target: e.target, id: e.pointerId, moved: false };
+  });
+  svgEl.addEventListener("pointermove", e => {
+    if (!drag) {
+      const g = e.target.closest ? e.target.closest("g.leaf") : null;
+      if (g) showAtlasTip(g, e, skills); else hideAtlasTip();
+      return;
+    }
+    if (!drag.moved) {
+      if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) < 5) return;
+      drag.moved = true;
+      svgEl.classList.add("panning");
+      try { svgEl.setPointerCapture(drag.id); } catch (err) {}
+      hideAtlasTip();
+    }
+    const rect = svgEl.getBoundingClientRect();
+    const vw = MAP_W / rect.width;
+    atlas.view.x = drag.vx + (e.clientX - drag.x) * vw;
+    atlas.view.y = drag.vy + (e.clientY - drag.y) * vw;
+    applyAtlasView();
+  });
+  svgEl.addEventListener("pointerup", () => {
+    if (drag && !drag.moved) {
+      const cn = drag.target.closest ? drag.target.closest("g.cnode") : null;
+      if (cn) {
+        const id = cn.getAttribute("data-c");
+        atlas.collapsed[id] = !atlas.collapsed[id];
+        render();
+      } else {
+        const g = drag.target.closest ? drag.target.closest("g.leaf") : null;
+        if (g) {
+          const key = g.getAttribute("data-key");
+          state.picked.has(key) ? state.picked.delete(key) : state.picked.add(key);
+          render();
+        }
+      }
+    }
+    drag = null;
+    svgEl.classList.remove("panning");
+  });
+  svgEl.addEventListener("pointerleave", hideAtlasTip);
+}
+
+function showAtlasTip(g, e, skills) {
+  const key = g.getAttribute("data-key");
+  const s = skills.find(sk => skillKey(sk) === key);
+  if (!s) return;
+  const tooltip = $("tooltip");
+  tooltip.innerHTML = `<div class="tn">${escapeHtml(s.name)}</div><div class="to">${escapeHtml(s.category)} · ${escapeHtml(s.source)}</div>` +
+    (s.description ? `<div class="th">${escapeHtml(s.description)}</div>` : "") +
+    `<div class="tt">+${s.tokensAlwaysOn} always-on</div>`;
+  tooltip.style.display = "block";
+  const br = $("mapbox").getBoundingClientRect();
+  let x = e.clientX - br.left + 14, y = e.clientY - br.top + 14;
+  if (x + 310 > br.width) x = e.clientX - br.left - 310;
+  if (y + 90 > br.height) y = e.clientY - br.top - 90;
+  tooltip.style.left = x + "px";
+  tooltip.style.top = y + "px";
+}
+function hideAtlasTip() { $("tooltip").style.display = "none"; }
+
+function buildCloud(skills) {
+  const box = $("cloudbox");
+  box.innerHTML = "";
+  if (!skills.length) return;
+  const counts = new Map();
+  for (const s of skills) {
+    const seen = new Set();
+    const words = (s.name.replace(/[:_-]/g, " ") + " " + (s.description || "") + " " + (s.tags || []).join(" "))
+      .toLowerCase().split(/[^a-z0-9]+/);
+    for (const w of words) {
+      if (w.length < 3 || ATLAS_STOP.has(w) || seen.has(w)) continue;
+      seen.add(w);
+      counts.set(w, (counts.get(w) || 0) + 1);
+    }
+  }
+  for (const w of [...counts.keys()]) {
+    if (w.length > 3 && w.endsWith("s") && counts.has(w.slice(0, -1))) {
+      counts.set(w.slice(0, -1), counts.get(w.slice(0, -1)) + counts.get(w));
+      counts.delete(w);
+    }
+  }
+  const words = [...counts.keys()].filter(w => counts.get(w) >= 2)
+    .sort((a, b) => counts.get(b) - counts.get(a) || (a < b ? -1 : 1))
+    .slice(0, 70);
+  if (!words.length) return;
+  const bw = box.clientWidth, bh = box.clientHeight;
+  const cmax = counts.get(words[0]), cmin = counts.get(words[words.length - 1]);
+  const active = (state.q || "").trim();
+  const placed = [];
+  words.forEach((w, wi) => {
+    const t = cmax === cmin ? 1 : (counts.get(w) - cmin) / (cmax - cmin);
+    const maxS = Math.max(22, Math.min(44, Math.round(bw / 11)));
+    const size = Math.round(11 + (maxS - 11) * Math.pow(t, 0.7));
+    const el = document.createElement("button");
+    el.type = "button";
+    el.className = "cw" + (t > 0.45 ? " big" : "") + (active === w ? " active" : "");
+    el.style.fontSize = size + "px";
+    el.textContent = w;
+    el.title = `${counts.get(w)} skills`;
+    el.setAttribute("aria-label", `${w}, ${counts.get(w)} skills; filters the catalog`);
+    box.appendChild(el);
+    const ww = el.offsetWidth, wh = el.offsetHeight;
+    let ok = false, x = 0, y = 0;
+    const sx = Math.max(1, Math.min(1.8, bw / bh)), sy = Math.max(1, Math.min(1.8, bh / bw));
+    for (let k = 0; k < 3000; k++) {
+      const r = 3.1 * Math.sqrt(k + wi * 0.7), th = (k + wi * 3) * 2.39996323;
+      x = bw / 2 + r * Math.cos(th) * sx - ww / 2;
+      y = bh / 2 + r * Math.sin(th) * sy - wh / 2;
+      if (x < 6 || y < 6 || x + ww > bw - 6 || y + wh > bh - 6) continue;
+      const clash = placed.some(p => !(x + ww + 5 < p.x || p.x + p.w + 5 < x || y + wh + 3 < p.y || p.y + p.h + 3 < y));
+      if (!clash) { ok = true; break; }
+    }
+    if (!ok) { box.removeChild(el); return; }
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    placed.push({ x, y, w: ww, h: wh });
+    el.onclick = () => {
+      const val = $("q").value.toLowerCase() === w ? "" : w;
+      $("q").value = val;
+      state.q = val;
+      render();
+    };
+  });
+}
+
+addEventListener("resize", () => {
+  if (state.view !== "atlas" || !state.data) return;
+  clearTimeout(atlas.resizeTimer);
+  atlas.resizeTimer = setTimeout(() => buildCloud(state.data.skills.filter(matches)), 200);
+});
 
 function copyBundle() {
   navigator.clipboard.writeText($("snippet").textContent).then(() => {
