@@ -10,13 +10,25 @@ wait_for: "article.row >> nth=0"
 scenes:
   - name: Open the catalog
     do:
-      - pause: 2.5
+      - pause: 2
   - name: Narrow to one category
     do:
       - click: "#f-cat button >> nth=1"
-      - wait_for: "#f-cat button[aria-pressed=true]"
+      - wait_for: "#f-cat button[aria-pressed=true]:nth-child(2)"
       - pause: 1.5
-  - name: Pick three skills and watch the stack grow
+  - name: Sort by always-on cost
+    do:
+      - click: "#listhead button[data-sort=on]"
+      - wait_for: "#listhead button[data-sort=on][aria-sort=descending]"
+      - pause: 1.5
+  - name: Expand the dearest skill
+    do:
+      - click: "article.row >> nth=0 >> .more"
+      - wait_for: "article.row.open .detail a:has-text('Open SKILL.md')"
+      - pause: 2.5
+      - click: "article.row >> nth=0 >> .more"
+      - pause: 0.5
+  - name: Pick three skills and watch the stack price itself
     do:
       - click: "article.row >> nth=0 >> .pick"
       - wait_for: "#stackcount:has-text('1 skill')"
@@ -25,15 +37,26 @@ scenes:
       - pause: 0.8
       - click: "article.row >> nth=2 >> .pick"
       - wait_for: "#stackcount:has-text('3 skills')"
-      - pause: 3.5
+      - pause: 2.5
   - name: Copy the generated bundle
     do:
       - click: "#copy"
       - wait_for: "#copy:has-text('Copied')"
       - js: "if (!(window.__copied || '').includes('source:')) throw new Error('clipboard did not receive the bundle')"
-      - pause: 2
+      - pause: 1.5
+  - name: Copy a plugin's install command
+    do:
+      - click: "#t-plugins"
+      - wait_for: "article.row >> nth=0 >> .install code"
+      - pause: 1.5
+      - click: "article.row >> nth=0 >> .install button"
+      - wait_for: "article.row >> nth=0 >> .install button:has-text('Copied')"
+      - js: "if (!(window.__copied || '').startsWith('claude plugin install')) throw new Error('clipboard did not receive the install command')"
+      - pause: 1.5
   - name: Switch to dark
     do:
+      - click: "#t-skills"
+      - wait_for: "article.row >> nth=0"
       - click: "#theme"
       - wait_for: "html[data-theme=dark]"
-      - pause: 3
+      - pause: 2.5

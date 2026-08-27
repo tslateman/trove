@@ -117,8 +117,10 @@ numbers are fitted and how to re-check them.
 just serve
 ```
 
-Open http://127.0.0.1:8787. Search by name, description, or tag. Pick skills to
-build a stack, then copy the generated bundle YAML.
+Open http://127.0.0.1:8787. Search by name, description, or tag, click a
+category tile to narrow, and sort by any cost column. Pick skills to build a
+stack, then copy the generated bundle YAML. With more than one source, the
+Shipped twice filter shows the names both ship; see [Twins](../README.md#twins).
 
 Press `just stop` when you are done.
 
