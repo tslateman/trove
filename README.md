@@ -101,7 +101,7 @@ renames:
   duet: skills # deprecate without breaking installs
 ```
 
-![Switching to the Plugins view: the whole-repo plugin lists 65 skills, the curated review-kit plugin lists 3 and carries a curated pill](docs/demo-curated.gif)
+![Switching to the Plugins view: the whole-repo plugin beside the curated review-kit plugin, which ships a subset and carries a curated pill](docs/demo-curated.gif)
 
 `local` points at the plugin root — the directory a `skills:` path is relative
 to. A relative `local` resolves against the bundle file, not the working
@@ -145,7 +145,7 @@ source, `just twins` lists each pair with the price each side charges, and the
 Shipped twice filter narrows the catalog to them. Picks stay apart because the
 stack keys a pick by source and path.
 
-![Filtering the catalog to the names two sources ship, picking both halves of the maintainability pair so the bundle splits into a block per source, and opening a row to read which repo it came from](docs/demo-twins.gif)
+![Filtering the catalog to the names two sources ship, picking both halves of the demo-review pair so the bundle splits into a block per source, and opening a row to read which source it came from](docs/demo-twins.gif)
 
 Claude Code keeps twins apart the same way. A plugin's skills are namespaced as
 `/<plugin>:<skill>`, so a personal `/refactor` and a plugin's
@@ -208,7 +208,7 @@ file only if the body sends it there.
 The bundled number is a ceiling, written `≤`: it assumes the skill reads every
 file it ships, which a skill that branches over its references never does.
 
-![Searching for visual-plan: its row shows three separate prices, always-on, when it fires, and bundled, 9 · ≤25.7k](docs/demo-bundled.gif)
+![Searching for ousterhout-software-design and opening its row: three separate prices, always-on, when it fires, and a ceiling across its bundled files](docs/demo-bundled.gif)
 
 An always-on figure is a ceiling too. Claude Code caps the whole skill listing
 at `skillListingBudgetFraction` of the context window, 1% by default, and
@@ -320,7 +320,7 @@ that stops a skill from being chosen or from being read as written.
 Each finding rides on the skill in `catalog.json` as `lint`, so the catalog
 filters and flags them too. `trove lint` exits 1 when anything is flagged.
 
-![Filtering the catalog by the lint flag: the list narrows to flagged skills, each row naming which check it failed, such as trigger](docs/demo-lint.gif)
+![Filtering the catalog by the lint flag: the list narrows to flagged skills, each row naming which check it failed, such as yaml](docs/demo-lint.gif)
 
 Rules stop there on purpose. A rule that fires on a third of a real registry
 teaches people to ignore the linter, so a check earns its place by what it
@@ -367,9 +367,12 @@ live element.
 
 `just demo` drives the same page through `scripts/demo.yml` and writes
 `out/demo.mp4`; pass another storyboard and output to record a different
-journey, as `just demo scripts/demo-twins.yml out/demo-twins.mp4` does for the
-twins gif. Every step waits on the state it expects, so a recording that
-finishes is also a passing run. It needs `shot-scraper`:
+journey. `just gifs` re-records every gif in this README from its storyboard
+under `scripts/`, against `bundles/registry.yaml` (the public registry) and,
+for the twins gif, `bundles/twins.yaml` (the fixture repo under two source
+keys), so no recording shows a private catalog. Every step waits on the state
+it expects, so a recording that finishes is also a passing run. It needs
+`shot-scraper`, and `just gifs` needs `ffmpeg`:
 
 ```bash
 uv tool install shot-scraper && shot-scraper install

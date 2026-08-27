@@ -1,0 +1,32 @@
+# The public registry. publish.yml builds this on every push to main and
+# deploys it to GitHub Pages; `just gifs` records the README gifs from it.
+name: tslateman
+description: Tommy Slater's Claude Code skills
+owner:
+  name: tslateman
+
+sources:
+  skills:
+    repo: tslateman/skills
+  trove:
+    repo: tslateman/trove
+    path: skills
+
+plugins:
+  - name: tslateman-skills
+    source: skills
+    category: development
+
+  - name: review-kit
+    source: skills
+    category: development
+    description: The review skills alone, for a session that only reads diffs
+    tags: [review]
+    skills:
+      - skills/review/
+
+  - name: trove
+    source: trove
+    version: 0.1.0
+    category: productivity
+    description: "Read skills from a Trove catalog without installing them: list what the registry holds, fetch one skill's instructions at its pinned commit, and see what installing it would cost in context."

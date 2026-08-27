@@ -1,0 +1,21 @@
+output: out/demo-lint.webm
+url: http://127.0.0.1:8787/
+viewport:
+  width: 1280
+  height: 800
+cursor: true
+wait_for: "article.row >> nth=0"
+scenes:
+  - name: Open the catalog
+    do:
+      - pause: 1.5
+  - name: Show only the skills the linter flagged
+    do:
+      - click: "#f-flag button:has-text('Flagged by lint')"
+      - wait_for: "#f-flag button[aria-pressed=true]:has-text('Flagged by lint')"
+      - pause: 2.5
+  - name: Open one to read which check it failed
+    do:
+      - click: "article.row >> nth=0 >> .more"
+      - wait_for: "article.row.open .detail dt:has-text('Lint')"
+      - pause: 2.5

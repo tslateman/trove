@@ -1,0 +1,16 @@
+output: out/demo-curated.webm
+url: http://127.0.0.1:8787/
+viewport:
+  width: 1280
+  height: 800
+cursor: true
+wait_for: "article.row >> nth=0"
+scenes:
+  - name: Open the catalog
+    do:
+      - pause: 1.5
+  - name: Switch to Plugins, where the curated subset carries its own pill
+    do:
+      - click: "#t-plugins"
+      - wait_for: "article.row:has(h4:text-is('review-kit')) .pill:has-text('curated')"
+      - pause: 3
