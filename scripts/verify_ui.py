@@ -62,7 +62,9 @@ TWIN_PROBE = """() => {
 }"""
 
 
-def check(page, url: str, expected_skills: int, shots: Path | None, theme: str) -> tuple[list[str], str]:
+def check(
+    page, url: str, expected_skills: int, shots: Path | None, theme: str
+) -> tuple[list[str], str]:
     problems: list[str] = []
     console: list[str] = []
     page.on("console", lambda m: console.append(m.text) if m.type == "error" else None)
@@ -73,7 +75,9 @@ def check(page, url: str, expected_skills: int, shots: Path | None, theme: str) 
 
     cards = page.locator(".card").count()
     if cards != expected_skills:
-        problems.append(f"[{theme}] rendered {cards} cards, catalog has {expected_skills}")
+        problems.append(
+            f"[{theme}] rendered {cards} cards, catalog has {expected_skills}"
+        )
 
     served = page.evaluate("() => state.data.skills.map(s => [s.name, s.description])")
     rendered = page.evaluate(
@@ -90,8 +94,8 @@ def check(page, url: str, expected_skills: int, shots: Path | None, theme: str) 
         problems.append(f"[{theme}] no category facets rendered")
     page.locator(".card .pick").first.click()
     page.wait_for_selector(".stack:not(.hidden)", timeout=3000)
-    if "always-on" not in page.locator("#budgettext").inner_text():
-        problems.append(f"[{theme}] budget readout missing after picking a skill")
+    if "1" not in page.locator("#stackcount").inner_text():
+        problems.append(f"[{theme}] stack count did not update after picking a skill")
     snippet = page.locator("#snippet").inner_text()
     picked = page.locator(".card.picked h4").first.inner_text()
     for fragment in ("- name:", "source:", "skills:"):
@@ -148,7 +152,9 @@ def main() -> int:
     with sync_playwright() as p:
         browser = launch(p, find_browser())
         for theme in ("light", "dark"):
-            page = browser.new_page(viewport={"width": 1340, "height": 940}, color_scheme=theme)
+            page = browser.new_page(
+                viewport={"width": 1340, "height": 940}, color_scheme=theme
+            )
             found, backgrounds[theme] = check(page, url, expected, args.shots, theme)
             problems += found
             page.close()
