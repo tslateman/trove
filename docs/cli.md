@@ -188,7 +188,7 @@ trove cache [--clear]
 ```
 /Users/you/.cache/trove/sources: 5 checkout(s), 1.9 MiB
   https-github.com-your-org-monorepo.git/eb4f0760911698f76a8f825e0bf2fb202c53f7d0
-  https-github.com-tslateman-skills.git/e28569421862eb10f34bbe2db5fe3f4d7e4b5e7b
+  https-github.com-your-org-skills.git/e28569421862eb10f34bbe2db5fe3f4d7e4b5e7b
 ```
 
 Checkouts are keyed by commit sha, so a warm cache is safe to keep and cheap to
