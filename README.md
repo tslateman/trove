@@ -371,9 +371,10 @@ live element.
 `just demo` drives the same page through `scripts/demo.yml` and writes
 `out/demo.mp4`; pass another storyboard and output to record a different
 journey. `just gifs` re-records every gif in this README from its storyboard
-under `scripts/`, against `bundles/registry.yaml` (the public registry) and,
-for the twins gif, `bundles/twins.yaml` (the fixture repo under two source
-keys), so no recording shows a private catalog. Every step waits on the state
+under `scripts/`, against `bundles/registry.yaml` (the public registry), with
+the twins and lint gifs recorded from fixture bundles (`bundles/twins.yaml`,
+`bundles/lint.yaml`) that stage what those flags need, so no recording depends
+on a private catalog or on a real skill staying broken. Every step waits on the state
 it expects, so a recording that finishes is also a passing run. It needs
 `shot-scraper`, and `just gifs` needs `ffmpeg`:
 
