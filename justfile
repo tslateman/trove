@@ -65,6 +65,10 @@ sync-local-check:
 sync-local:
     uv run trove --bundle {{ bundle }} sync-local
 
+# Copy a personal skill into a source checkout and lint it, e.g. `just promote tidy team`
+promote name source *args:
+    uv run trove --bundle {{ bundle }} promote {{ name }} --source {{ source }} {{ args }}
+
 # Report bundle fields that disagree with their source plugin.json
 drift:
     uv run trove --bundle {{ bundle }} drift

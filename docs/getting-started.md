@@ -204,6 +204,8 @@ just sync-local-check  # what Claude Code's local marketplace has drifted to
 
 ## Next
 
+- Wrote a skill for yourself that belongs in the team repo? Follow
+  [Share a skill](sharing-a-skill.md).
 - [CLI reference](cli.md) for every command and flag
 - [Troubleshooting](troubleshooting.md) for what the errors mean
 - [The bundle](../README.md#the-bundle) for the full file format

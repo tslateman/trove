@@ -17,6 +17,7 @@ from . import local
 from .fetch import Workspace, default_cache
 from .lint import FINDINGS
 from .loader import load_bundle
+from .promote import promote
 from .resolve import drift, source_manifest
 from .scan import scan_source
 
@@ -111,6 +112,56 @@ def cmd_lint(args: argparse.Namespace) -> int:
         return 1
     print("no findings: every skill names itself and says when it fires")
     return 0
+
+
+def cmd_promote(args: argparse.Namespace) -> int:
+    bundle = load_bundle(args.bundle)
+    if args.source not in bundle.sources:
+        raise ValueError(
+            f"bundle names no source {args.source!r}; it has {sorted(bundle.sources)}"
+        )
+    source = bundle.sources[args.source]
+    skill_dir = (args.source_dir or Path.home() / ".claude" / "skills" / args.name).expanduser()
+    dest, skill = promote(skill_dir, source, args.into)
+    root = dest.parent
+    while root != root.parent and not (root / ".git").exists():
+        root = root.parent
+    rel = dest.relative_to(root) if (root / ".git").exists() else dest
+
+    print(f"copied {skill_dir} -> {dest}")
+    if skill.lint:
+        for code in skill.lint:
+            print(f"  {code}: {FINDINGS[code]}")
+        print("  fix these before pushing, or discovery skips the skill for everyone")
+    else:
+        print("  lint: clean")
+    print(
+        f"  +{skill.tokens_always_on} tok always-on, "
+        f"{skill.tokens_on_invoke:,} when it fires"
+    )
+
+    whole = [p.name for p in bundle.plugins if p.source_key == source.key and not p.skills]
+    curated = [p.name for p in bundle.plugins if p.source_key == source.key and p.skills]
+    print("\nnext:")
+    print(f"  git -C {root} add {rel}")
+    print(f"  git -C {root} commit -m 'Add {skill.name}' && git -C {root} push")
+    if curated:
+        print(
+            f"  # to ship it from {', '.join(curated)}, add {skill.rel_path} under "
+            f"skills: in {args.bundle}"
+        )
+    if whole:
+        print(f"  # {', '.join(whole)} ships the whole source, so the next build carries it")
+    if not whole and not curated:
+        print(f"  # no plugin in {args.bundle} ships source {source.key!r} yet; add one")
+    print("  just dist")
+    for name in whole:
+        print(
+            f"  claude plugin install {name}@{bundle.name}"
+            f"   # teammates; already installed: claude plugin update {name}@{bundle.name}"
+        )
+    print(f"  rm -r {skill_dir}   # once the plugin copy is installed, or you become your own twin")
+    return 1 if skill.lint else 0
 
 
 def cmd_drift(args: argparse.Namespace) -> int:
@@ -336,6 +387,19 @@ def main(argv: list[str] | None = None) -> int:
 
     drift_cmd = sub.add_parser("drift", help="report bundle fields that disagree with the source plugin.json")
     drift_cmd.set_defaults(func=cmd_drift)
+
+    promote_cmd = sub.add_parser(
+        "promote", help="copy a personal skill into a source checkout and lint it"
+    )
+    promote_cmd.add_argument("name", help="skill directory name under ~/.claude/skills")
+    promote_cmd.add_argument("--source", required=True, help="bundle source key to promote into")
+    promote_cmd.add_argument(
+        "--from", dest="source_dir", type=Path, help="skill directory, when not under ~/.claude/skills"
+    )
+    promote_cmd.add_argument(
+        "--into", help="directory under the source root; default: skills/ if it exists, else the root"
+    )
+    promote_cmd.set_defaults(func=cmd_promote)
 
     calibrate = sub.add_parser("calibrate", help="compare estimates against claude plugin details")
     calibrate.add_argument("source")

@@ -9,6 +9,8 @@ token cost on every row.
 New here? Start with the [getting started guide](docs/getting-started.md).
 For every command and flag, see the [CLI reference](docs/cli.md).
 When something fails, [troubleshooting](docs/troubleshooting.md).
+Wrote a skill for yourself that the team should have?
+[Share a skill](docs/sharing-a-skill.md).
 
 ## Why
 
@@ -50,6 +52,7 @@ just drift         # bundle fields that disagree with their source plugin.json
 just sync-local-check  # preview local-marketplace updates
 just sync-local        # apply them
 just orphans       # skills no plugin ships
+just promote name source   # copy a personal skill into a source checkout and lint it
 just twins         # skill names more than one source ships
 just calibrate skills skills@local   # check estimates against Claude Code
 ```
