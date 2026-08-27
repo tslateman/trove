@@ -22,7 +22,7 @@ records what each one does and what each one measures.
 | Pinned by               | Commit sha, resolved at build                               | Immutable version number | Version in `tessl.json`                    | No pin syntax documented             |
 | Publish step            | None — a bundle composes what repos already own             | Web UI or `skill-create` | `tessl skill publish`, lints first         | None; install telemetry surfaces it  |
 | Read without installing | Yes, via `skills/trove`                                     | Yes                      | No                                         | No                                   |
-| Runtime dependency      | None installed; the bridge adds catalog host and GitHub     | PostHog uptime           | None after install                         | None after install                   |
+| Runtime dependency      | None installed; the reader adds catalog host and GitHub     | PostHog uptime           | None after install                         | None after install                   |
 
 ## What the catalog tells you before you commit
 
@@ -52,11 +52,11 @@ Measured with `trove`'s own estimator:
 
 | Subject                                       | Always-on | On invoke |
 | --------------------------------------------- | --------- | --------- |
-| Trove bridge, `skills/trove`                  | 111       | 1,107     |
+| Trove reader, `skills/trove`                  | 111       | 1,107     |
 | PostHog bridge, `skills-store`                | 82        | 3,819     |
 | Every skill in the published registry, all 62 | 7,853     | —         |
 
-Both bridges front a whole registry for the price of one skill. PostHog's runs
+Both front a whole registry for the price of one skill. PostHog's runs
 against a database and puts the store's uptime in the path of every session that
 fires a skill; Trove's resolves raw git at a pinned sha and needs no server.
 Tessl and skills.sh document no read-without-install mode, so every skill
