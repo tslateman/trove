@@ -4,7 +4,7 @@ A registry for Claude Code skills. Author skills in whatever repo owns them,
 compose them into bundles, publish a marketplace, and browse the catalog with
 token cost on every row.
 
-![Filtering the catalog to one category, picking three skills, and copying the bundle they generate](docs/demo.gif)
+![Narrowing the catalog to one category, sorting by always-on cost, expanding the dearest skill, picking three into a stack that prices itself, copying the bundle, copying a plugin's install command, and switching to dark](docs/demo.gif)
 
 New here? Start with the [getting started guide](docs/getting-started.md).
 For every command and flag, see the [CLI reference](docs/cli.md).
