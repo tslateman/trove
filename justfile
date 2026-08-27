@@ -3,6 +3,7 @@
 bundle := "bundles/local.yaml"
 out := "out"
 port := "8787"
+gif_filter := "fps=10,scale=1000:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5"
 
 # Show available recipes
 default:
@@ -158,6 +159,19 @@ demo storyboard="scripts/demo.yml" video="out/demo.mp4": catalog
     mp4="{{ video }}"
     shot-scraper video {{ out }}/demo.yml -o "${mp4%.mp4}.webm" --mp4
     echo "wrote $mp4"
+
+# Re-record every README gif from its storyboard against the public registry
+gifs: 
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v ffmpeg >/dev/null || { echo "gifs needs ffmpeg on PATH" >&2; exit 1; }
+    for story in demo demo-curated demo-mixing demo-atlas demo-bundled demo-lint; do
+      just --set bundle bundles/registry.yaml --set port {{ port }} demo "scripts/$story.yml" "{{ out }}/$story.mp4"
+      ffmpeg -y -loglevel error -i "{{ out }}/$story.mp4" -vf "{{ gif_filter }}" "docs/$story.gif"
+    done
+    just --set bundle bundles/twins.yaml --set port {{ port }} demo scripts/demo-twins.yml {{ out }}/demo-twins.mp4
+    ffmpeg -y -loglevel error -i {{ out }}/demo-twins.mp4 -vf "{{ gif_filter }}" docs/demo-twins.gif
+    ls -la docs/*.gif
 
 # Format markdown
 fmt:

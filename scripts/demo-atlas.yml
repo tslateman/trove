@@ -1,0 +1,27 @@
+output: out/demo-atlas.webm
+url: http://127.0.0.1:8787/
+viewport:
+  width: 1280
+  height: 800
+cursor: true
+wait_for: "article.row >> nth=0"
+scenes:
+  - name: Open the catalog
+    do:
+      - pause: 1.5
+  - name: Switch to the Atlas
+    do:
+      - click: "#t-atlas"
+      - wait_for: "#mapbox g.leaf >> nth=0"
+      - pause: 2
+  - name: Pick a skill on the map
+    do:
+      - click: "#mapbox g.leaf >> nth=0"
+      - wait_for: "#mapbox g.leaf.sel"
+      - wait_for: "#stackcount:has-text('1 skill')"
+      - pause: 1.5
+  - name: Click a cloud word to narrow the map and the search box together
+    do:
+      - click: "#cloudbox button:text-is('review')"
+      - wait_for: "#cloudbox button.active:text-is('review')"
+      - pause: 3

@@ -1,7 +1,8 @@
 # The skill registry landscape
 
 Four registries, four answers to how a skill reaches a session. This page
-records what each one does and what each one measures.
+records what each one does and what each one measures, as surveyed on
+2026-08-27. The other three move faster than this page.
 
 ## The four
 

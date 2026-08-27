@@ -13,3 +13,5 @@ shots/
 bundles/*.yaml
 !bundles/example.yaml
 !bundles/demo.yaml
+!bundles/registry.yaml
+!bundles/twins.yaml

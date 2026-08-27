@@ -16,19 +16,17 @@ scenes:
       - pause: 2.5
   - name: Pick both halves of one pair and watch the bundle split per source
     do:
-      - fill: { into: "#q", text: "maintainability" }
-      - wait_for: "article.row:has(h4:text-is('maintainability')) >> nth=1"
-      - pause: 1
-      - click: "article.row:has(h4:text-is('maintainability')) >> nth=0 >> .pick"
+      - wait_for: "article.row:has(h4:text-is('demo-review')) >> nth=1"
+      - click: "article.row:has(h4:text-is('demo-review')) >> nth=0 >> .pick"
       - wait_for: "#stackcount:has-text('1 skill')"
       - pause: 0.8
-      - click: "article.row:has(h4:text-is('maintainability')) >> nth=1 >> .pick"
+      - click: "article.row:has(h4:text-is('demo-review')) >> nth=1 >> .pick"
       - wait_for: "#stackcount:has-text('2 skills')"
-      - wait_for: "#snippet:has-text('my-stack-dotfiles')"
-      - wait_for: "#snippet:has-text('my-stack-skills')"
+      - wait_for: "#snippet:has-text('source: demo-fork')"
+      - js: "const s = document.getElementById('snippet').textContent; if (!(s.includes('my-stack-demo\\n') && s.includes('my-stack-demo-fork'))) throw new Error('the bundle did not split per source')"
       - pause: 3
   - name: Open a row to see which repo it came from
     do:
-      - click: "article.row:has(h4:text-is('maintainability')) >> nth=1 >> .more"
+      - click: "article.row:has(h4:text-is('demo-review')) >> nth=1 >> .more"
       - wait_for: "article.row.open .detail"
       - pause: 2.5

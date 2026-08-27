@@ -1,0 +1,24 @@
+# Records docs/demo-twins.gif. The fixture repo is declared twice under two
+# source keys, so every name is shipped twice and no private catalog is needed.
+name: twins-demo
+description: One repo under two source keys, so every name is a twin
+owner:
+  name: tslateman
+
+sources:
+  demo:
+    local: ../tests/fixtures/demo-repo
+  demo-fork:
+    local: ../tests/fixtures/demo-repo
+
+plugins:
+  - name: demo
+    source: demo
+    version: 0.1.0
+    category: development
+    description: Every fixture skill
+  - name: demo-fork
+    source: demo-fork
+    version: 0.1.0
+    category: development
+    description: The same fixture skills under a second source

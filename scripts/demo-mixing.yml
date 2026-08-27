@@ -1,0 +1,29 @@
+output: out/demo-mixing.webm
+url: http://127.0.0.1:8787/
+viewport:
+  width: 1280
+  height: 800
+cursor: true
+wait_for: "article.row >> nth=0"
+scenes:
+  - name: Open the catalog
+    do:
+      - pause: 1.5
+  - name: Narrow to a plugin from one repo and pick a skill
+    do:
+      - click: "#f-plug button:has-text('tslateman-skills')"
+      - wait_for: "#f-plug button[aria-pressed=true]:has-text('tslateman-skills')"
+      - pause: 1
+      - click: "article.row >> nth=0 >> .pick"
+      - wait_for: "#stackcount:has-text('1 skill')"
+      - pause: 1.5
+  - name: Narrow to a plugin from another repo and pick a second
+    do:
+      - click: "#f-plug button:has-text('trove')"
+      - wait_for: "#f-plug button[aria-pressed=true]:has-text('trove')"
+      - pause: 1
+      - click: "article.row >> nth=0 >> .pick"
+      - wait_for: "#stackcount:has-text('2 skills')"
+      - wait_for: "#snippet:has-text('my-stack-trove')"
+      - wait_for: "#snippet:has-text('my-stack-skills')"
+      - pause: 3
