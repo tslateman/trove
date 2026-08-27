@@ -1,7 +1,7 @@
 {
   "name": "trove",
   "version": "0.1.0",
-  "description": "Read Claude Code skills from a Trove catalog without installing them — one bridge skill lists the registry, fetches a body at its pinned commit, and prices what each install would cost in context.",
+  "description": "Read skills from a Trove catalog without installing them: list what the registry holds, fetch one skill's instructions at its pinned commit, and see what installing it would cost in context.",
   "author": {
     "name": "Tommy Slater"
   },

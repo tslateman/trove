@@ -25,9 +25,9 @@ runner. Settle that before designing the schema.
 ## Serving
 
 Fetching removed the local-checkout dependency, so the catalog can now be built
-anywhere. Publishing it is a deploy step. The bridge skill turned out to be one
+anywhere. Publishing it is a deploy step. The reader skill turned out to be one
 too: `catalog.json` names each source's url and sha, and git serves the body, so
-a session reaching a skill through the bridge depends on the host of the catalog
+a session reaching a skill through the reader depends on the host of the catalog
 and on GitHub, never on a Trove process. What remains is publishing the catalog
 and reaching sources git does not serve publicly.
 
@@ -39,10 +39,10 @@ and reaching sources git does not serve publicly.
       file-get from `catalog.json` plus the `sources` block, which now carries
       each source's url and pinned sha. Git hosts the immutable content, so the
       surface resolves rather than stores and needs no server.
-- [x] **Price the bridge.** The bridge costs 111 tokens always-on. Installing
+- [x] **Price the reader.** The reader skill costs 111 tokens always-on. Installing
       every plugin in the published registry costs 7,853 across 62 skills. Break-even
       is two skills.
-- [x] **Serve the bodies the bridge points at.** `sources[].body` names one base
+- [x] **Serve the bodies the reader points at.** `sources[].body` names one base
       per source: raw git at the pinned sha for a public GitHub source, and
       `body/<source>/` for everything else, which `trove serve` answers from the
       checkout on disk. A source with no checkout and no public pin still has
