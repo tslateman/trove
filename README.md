@@ -100,6 +100,8 @@ renames:
   duet: skills # deprecate without breaking installs
 ```
 
+![Switching to the Plugins view: the whole-repo plugin lists 65 skills, the curated review-kit plugin lists 3 and carries a curated pill](docs/demo-curated.gif)
+
 `local` points at the plugin root — the directory a `skills:` path is relative
 to. A relative `local` resolves against the bundle file, not the working
 directory. It is optional: a source with only a remote is fetched at build time,
@@ -125,6 +127,15 @@ a `marketplace.json` a teammate consumes in two commands:
 claude plugin marketplace add <your-registry>
 claude plugin install review-kit@mine
 ```
+
+## Mixing sources
+
+`sources` is a map, so a bundle names as many repos as it wants and the
+catalog browses all of them together. Picking skills from different sources
+into one stack still works: the generated snippet groups by source and emits
+a plugin block per source, each scoped to only the skills you picked from it.
+
+![Filtering to a plugin from one repo, picking a skill, filtering to a plugin from another repo, picking a second skill: the composed bundle splits into a block per source](docs/demo-mixing.gif)
 
 ## Editing a plugin's description
 
@@ -152,6 +163,8 @@ file only if the body sends it there.
 
 The bundled number is a ceiling, written `≤`: it assumes the skill reads every
 file it ships, which a skill that branches over its references never does.
+
+![Searching for visual-plan: its card shows three separate prices — always-on, when it fires, and 9 files · ≤25.7k if read](docs/demo-bundled.gif)
 
 An always-on figure is a ceiling too. Claude Code caps the whole skill listing
 at `skillListingBudgetFraction` of the context window, 1% by default, and
@@ -262,6 +275,8 @@ that stops a skill from being chosen or from being read as written.
 
 Each finding rides on the skill in `catalog.json` as `lint`, so the catalog
 filters and flags them too. `trove lint` exits 1 when anything is flagged.
+
+![Filtering the catalog by the lint flag: the grid narrows to flagged skills, each card naming which check it failed, such as trigger](docs/demo-lint.gif)
 
 Rules stop there on purpose. A rule that fires on a third of a real registry
 teaches people to ignore the linter, so a check earns its place by what it
