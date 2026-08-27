@@ -118,7 +118,7 @@ just serve
 ```
 
 Open http://127.0.0.1:8787. Search by name, description, or tag. Pick skills to
-build a stack and watch the always-on total move against a budget.
+build a stack, then copy the generated bundle YAML.
 
 Press `just stop` when you are done.
 

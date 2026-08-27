@@ -16,7 +16,7 @@ scenes:
       - click: "#f-cat button >> nth=0"
       - wait_for: "#f-cat button[aria-pressed=true]"
       - pause: 1.5
-  - name: Pick three skills and watch the price
+  - name: Pick three skills and watch the stack grow
     do:
       - click: "article.card >> nth=0 >> .pick"
       - wait_for: "#stackcount:has-text('1 skills')"

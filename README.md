@@ -298,9 +298,10 @@ just demo      # record an mp4 walkthrough of the catalog
 ```
 
 `just verify` serves the site and drives it in headless Chromium. It fails if
-the card count drifts from the catalog, a console error fires, the budget
-readout goes missing, the generated bundle omits a picked skill, the page
-scrolls sideways at 390px, both themes paint the same background, or a hostile
+the card count drifts from the catalog, a console error fires, the stack count
+doesn't update after picking a skill, the generated bundle omits a picked
+skill, the page scrolls sideways at 390px, both themes paint the same
+background, or a hostile
 skill name survives into the DOM as a live element.
 
 `just demo` drives the same page through `scripts/demo.yml` and writes
