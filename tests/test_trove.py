@@ -1253,3 +1253,65 @@ def test_the_ui_probe_pushes_the_shape_the_scanner_emits():
         ).to_dict()
     )
     assert emitted <= keys, f"the probe omits {sorted(emitted - keys)}"
+
+
+def _skill(dir: Path, name: str, description: str) -> Path:
+    skill = dir / name
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text(
+        f"---\nname: {name}\ndescription: {description}\n---\n\nDo the thing.\n"
+    )
+    return skill
+
+
+def test_promote_lands_under_skills_when_the_source_keeps_one(tmp_path):
+    from trove.promote import promote
+
+    root = tmp_path / "repo"
+    (root / "skills" / "review").mkdir(parents=True)
+    personal = _skill(tmp_path / "personal", "tidy", "Tidy code. Use when asked to tidy.")
+    (personal / "__pycache__").mkdir()
+    (personal / "__pycache__" / "x.pyc").write_bytes(b"")
+
+    dest, skill = promote(personal, Source(key="team", local=root))
+
+    assert dest == root / "skills" / "tidy"
+    assert (dest / "SKILL.md").is_file()
+    assert not (dest / "__pycache__").exists()
+    assert skill.rel_path == "skills/tidy"
+    assert skill.lint == []
+
+
+def test_promote_lands_at_the_root_of_a_flat_source(tmp_path):
+    from trove.promote import promote
+
+    root = tmp_path / "flat"
+    _skill(root, "other", "Other. Use when other.")
+    personal = _skill(tmp_path / "personal", "tidy", "Tidy code. Use when asked to tidy.")
+
+    dest, _ = promote(personal, Source(key="team", local=root))
+
+    assert dest == root / "tidy"
+
+
+def test_promote_refuses_a_name_the_source_already_ships(tmp_path):
+    from trove.promote import promote
+
+    root = tmp_path / "repo"
+    _skill(root / "skills", "tidy", "Tidy. Use when tidy.")
+    personal = _skill(tmp_path / "personal", "tidy", "Tidy. Use when tidy.")
+
+    with pytest.raises(ValueError, match="already ships"):
+        promote(personal, Source(key="team", local=root))
+
+
+def test_promote_surfaces_lint_findings_on_the_copy(tmp_path):
+    from trove.promote import promote
+
+    root = tmp_path / "repo"
+    (root / "skills").mkdir(parents=True)
+    personal = _skill(tmp_path / "personal", "tidy", "Tidy code, nothing more.")
+
+    _, skill = promote(personal, Source(key="team", local=root))
+
+    assert skill.lint == ["trigger"]

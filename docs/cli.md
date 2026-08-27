@@ -145,6 +145,24 @@ description, since a curated subset needs its own wording.
 
 Recipe: `just drift`.
 
+## promote
+
+Copy a skill from your personal directory into a source's local checkout, lint
+the copy, and print the commands that follow.
+
+```bash
+trove promote <name> --source <key> [--from <dir>] [--into <subdir>]
+```
+
+`<name>` is a directory under `~/.claude/skills/`; `--from` names another
+origin. The copy lands under `skills/` when the checkout keeps one, else at the
+root, and `--into` overrides that. Caches (`__pycache__`, `.ruff_cache`) stay
+behind. The command refuses a name the source already ships, and exits 1 when
+the copy carries a lint finding. See [Share a skill](sharing-a-skill.md) for
+the whole path from one machine to the team.
+
+Recipe: `just promote <name> <source>`.
+
 ## sync-local
 
 Update Claude Code's local marketplace from each source `plugin.json`.
