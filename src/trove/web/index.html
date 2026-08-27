@@ -74,6 +74,11 @@ aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh -
 .facet button[aria-pressed=true] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .facet button i { font-style: normal; font: 11px/1 var(--mono); color: var(--muted); }
 .facet button[aria-pressed=true] i { color: var(--accent); }
+.facet button.fallback span::after { content: " · source"; color: var(--muted); font-weight: 400; font-size: 11px; }
+aside.inert .facet { opacity: .45; }
+aside.inert .facet button { cursor: default; pointer-events: none; }
+.asidenote { display: none; font-size: 12px; line-height: 1.5; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 10px; margin: 0 0 18px; }
+aside.inert .asidenote { display: block; }
 
 .tabs { display: flex; gap: 4px; margin-bottom: 18px; }
 .tabs button { border: 1px solid var(--line); background: var(--panel); color: var(--muted);
@@ -188,7 +193,8 @@ aside { position: sticky; top: 78px; align-self: start; max-height: calc(100vh -
 </header>
 
 <main>
-  <aside>
+  <aside id="sidebar">
+    <p class="asidenote">These facets filter Skills and Atlas. They do not change the Plugins list.</p>
     <div class="facet"><h3>Category</h3><div id="f-cat"></div></div>
     <div class="facet"><h3>Plugin</h3><div id="f-plug"></div></div>
     <div class="facet"><h3>Flags</h3><div id="f-flag"></div></div>
@@ -265,6 +271,7 @@ function setView(v) {
   $("legend").hidden = v !== "skills";
   $("grid").style.display = v === "atlas" ? "none" : "";
   $("atlas").classList.toggle("hidden", v !== "atlas");
+  $("sidebar").classList.toggle("inert", v === "plugins");
   render();
 }
 
@@ -277,12 +284,23 @@ function matches(s) {
   return (s.name + " " + s.description + " " + (s.tags || []).join(" ")).toLowerCase().includes(state.q);
 }
 
-function facet(host, entries, key) {
+// Plugin cards have no category/plugin/lint of their own to facet by — only
+// the shared search box applies to them.
+function matchesPlugin(p) {
+  if (!state.q) return true;
+  return (p.name + " " + (p.description || "") + " " + (p.tags || []).join(" ")).toLowerCase().includes(state.q);
+}
+
+function facet(host, entries, key, fallbackOf) {
   host.innerHTML = "";
   for (const [label, count] of entries) {
     const b = document.createElement("button");
     b.innerHTML = `<span>${escapeHtml(String(label))}</span><i>${count}</i>`;
     b.setAttribute("aria-pressed", state[key] === label);
+    if (fallbackOf && fallbackOf.get(label)) {
+      b.classList.add("fallback");
+      b.title = "Derived from the repo name — not a curated category";
+    }
     b.onclick = () => { state[key] = state[key] === label ? null : label; render(); };
     host.appendChild(b);
   }
@@ -295,7 +313,14 @@ function render() {
     for (const s of skills) for (const v of [].concat(fn(s))) m.set(v, (m.get(v) || 0) + 1);
     return [...m].sort((a, b) => b[1] - a[1]);
   };
-  facet($("f-cat"), tally(s => s.category), "cat");
+  // A category is a fallback (repo name standing in for a real topic) only
+  // when every skill wearing that label is one — a genuine category can
+  // coincidentally share a name with a fallback from another source.
+  const catFallback = new Map();
+  for (const s of skills) {
+    catFallback.set(s.category, (catFallback.get(s.category) ?? true) && s.categoryIsFallback);
+  }
+  facet($("f-cat"), tally(s => s.category), "cat", catFallback);
   facet($("f-plug"), tally(s => s.plugins), "plug");
   facet($("f-flag"), [
     ["lint", skills.filter(s => s.lint.length).length],
@@ -312,7 +337,7 @@ function render() {
 
   const grid = $("grid");
   grid.innerHTML = "";
-  const rows = state.view === "skills" ? skills.filter(matches) : state.data.plugins;
+  const rows = state.view === "skills" ? skills.filter(matches) : state.data.plugins.filter(matchesPlugin);
   $("empty").hidden = rows.length > 0;
 
   for (const r of rows) {

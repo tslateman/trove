@@ -50,13 +50,16 @@ def is_shipped(rel_path: str) -> bool:
     )
 
 
-def category_for(rel_path: str, source_key: str) -> str:
+def category_for(rel_path: str, source_key: str) -> tuple[str, bool]:
+    """Return (category, is_fallback). is_fallback is True when the path has no
+    real subfolder to name a category from, so the source key stands in for one.
+    """
     parts = list(Path(rel_path).parts)
     if parts and parts[0] == "skills":
         parts.pop(0)
     if len(parts) >= 2:
-        return parts[0]
-    return source_key
+        return parts[0], False
+    return source_key, True
 
 
 def bundled(skill_dir: Path) -> tuple[int, int]:
@@ -96,13 +99,15 @@ def scan_source(source: Source, root: Path | None = None) -> list[Skill]:
         name = meta.get("name") or skill_file.parent.name
         description = meta.get("description", "").strip()
         files, chars = bundled(skill_file.parent)
+        category, category_is_fallback = category_for(rel_dir, source.key)
         skills.append(
             Skill(
                 name=name,
                 description=description,
                 rel_path=rel_dir,
                 source_key=source.key,
-                category=category_for(rel_dir, source.key),
+                category=category,
+                category_is_fallback=category_is_fallback,
                 body_chars=len(body),
                 frontmatter_chars=len(name) + len(description),
                 strict_yaml=strict_yaml_ok(text),

@@ -38,7 +38,9 @@ def test_strict_yaml_flags_the_same_file_as_invalid():
 
 def test_parses_folded_block_scalar():
     meta, _ = frontmatter.split(FOLDED)
-    assert meta["description"] == "Language review skills only, spanning five languages."
+    assert (
+        meta["description"] == "Language review skills only, spanning five languages."
+    )
     assert strict_yaml_ok(FOLDED) is True
 
 
@@ -49,16 +51,18 @@ def test_missing_frontmatter_returns_whole_body():
 
 
 @pytest.mark.parametrize(
-    "path,source,expected",
+    "path,source,expected_category,expected_fallback",
     [
-        ("skills/craft/tidy", "skills", "craft"),
-        ("skills/adr", "duet", "duet"),
-        ("adr", "duet", "duet"),
-        ("skills/review/go-review", "skills", "review"),
+        ("skills/craft/tidy", "skills", "craft", False),
+        ("skills/adr", "duet", "duet", True),
+        ("adr", "duet", "duet", True),
+        ("skills/review/go-review", "skills", "review", False),
     ],
 )
-def test_category_falls_back_to_source_when_layout_is_flat(path, source, expected):
-    assert category_for(path, source) == expected
+def test_category_falls_back_to_source_when_layout_is_flat(
+    path, source, expected_category, expected_fallback
+):
+    assert category_for(path, source) == (expected_category, expected_fallback)
 
 
 @pytest.mark.parametrize(
@@ -153,7 +157,7 @@ def test_scan_skips_repo_local_claude_skills(tmp_path):
     consumer = tmp_path / ".claude" / "skills" / "vendor"
     for d in (shipped, consumer):
         d.mkdir(parents=True)
-        (d / "SKILL.md").write_text("---\nname: %s\ndescription: d\n---\nbody\n" % d.name)
+        (d / "SKILL.md").write_text(f"---\nname: {d.name}\ndescription: d\n---\nbody\n")
     found = scan_source(Source(key="s", repo="o/s", local=tmp_path))
     assert [s.name for s in found] == ["tidy"]
 
@@ -164,7 +168,7 @@ def _bundle_with_curated_plugin(tmp_path: Path) -> Path:
         d = repo / rel
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text(
-            "---\nname: %s\ndescription: d\n---\nbody\n" % Path(rel).name
+            f"---\nname: {Path(rel).name}\ndescription: d\n---\nbody\n"
         )
     bundle = tmp_path / "b.yaml"
     bundle.write_text(
@@ -207,9 +211,7 @@ def test_whole_repo_plugin_does_not_stamp_its_tags_on_every_skill(tmp_path):
 
     bundle = _bundle_with_curated_plugin(tmp_path)
     bundle.write_text(
-        bundle.read_text().replace(
-            "    skills: [skills/review/go-review]\n", ""
-        )
+        bundle.read_text().replace("    skills: [skills/review/go-review]\n", "")
     )
     catalog = build_catalog(load_bundle(bundle))
     assert {r["name"] for r in catalog["skills"]} == {"go-review", "excalidraw"}
@@ -262,7 +264,11 @@ def test_resolve_sha_ignores_refname_sort_order(tmp_path):
 
     work = _repo_with_ambiguous_refs(tmp_path)
     expected = subprocess.run(
-        ["git", "rev-parse", "main"], cwd=work, capture_output=True, text=True, check=True
+        ["git", "rev-parse", "main"],
+        cwd=work,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.strip()
     assert resolve_sha(Source(key="s", url=str(work), ref="main")) == expected
 
@@ -281,7 +287,11 @@ def test_resolve_sha_peels_an_annotated_tag_to_its_commit(tmp_path):
     work = _repo_with_ambiguous_refs(tmp_path)
     sha = resolve_sha(Source(key="s", url=str(work), ref="v1"))
     kind = subprocess.run(
-        ["git", "cat-file", "-t", sha], cwd=work, capture_output=True, text=True, check=True
+        ["git", "cat-file", "-t", sha],
+        cwd=work,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.strip()
     assert kind == "commit"
 
@@ -298,11 +308,15 @@ def test_ls_remote_treats_a_dash_leading_url_as_a_path_not_a_flag(tmp_path):
 
 @pytest.mark.parametrize("raw", ["x/y", "./x/y", "x/y/", "./x/y/"])
 def test_curated_paths_normalize_to_one_shape(raw):
-    assert PluginSpec(name="p", source_key="s", description="d", skills=[raw]).selected_paths == ["x/y"]
+    assert PluginSpec(
+        name="p", source_key="s", description="d", skills=[raw]
+    ).selected_paths == ["x/y"]
 
 
 def test_curated_path_normalization_is_a_prefix_strip_not_a_charset_strip():
-    spec = PluginSpec(name="p", source_key="s", description="d", skills=[".claude/skills/x"])
+    spec = PluginSpec(
+        name="p", source_key="s", description="d", skills=[".claude/skills/x"]
+    )
     assert spec.selected_paths == [".claude/skills/x"]
 
 
@@ -430,7 +444,9 @@ def test_plugin_metadata_is_inherited_from_the_source_manifest(tmp_path):
 def test_a_bundle_value_overrides_the_source_manifest(tmp_path):
     from trove.build import plugin_entry
 
-    source = _source_with_manifest(tmp_path, version="0.6.0", description="upstream text")
+    source = _source_with_manifest(
+        tmp_path, version="0.6.0", description="upstream text"
+    )
     spec = PluginSpec(name="kit", source_key="s", description="a curated subset")
     entry = plugin_entry(spec, source, sha=None)
     assert entry["description"] == "a curated subset"
@@ -440,7 +456,9 @@ def test_a_bundle_value_overrides_the_source_manifest(tmp_path):
 def test_drift_reports_a_restated_field_that_disagrees(tmp_path):
     from trove.resolve import drift, source_manifest
 
-    manifest = source_manifest(_source_with_manifest(tmp_path, version="0.6.0", description="up"))
+    manifest = source_manifest(
+        _source_with_manifest(tmp_path, version="0.6.0", description="up")
+    )
     spec = PluginSpec(name="s", source_key="s", description="down", version="0.5.0")
     assert sorted(f for f, _, _ in drift(spec, manifest)) == ["description", "version"]
 
@@ -448,9 +466,14 @@ def test_drift_reports_a_restated_field_that_disagrees(tmp_path):
 def test_drift_exempts_a_curated_plugins_own_description(tmp_path):
     from trove.resolve import drift, source_manifest
 
-    manifest = source_manifest(_source_with_manifest(tmp_path, version="0.6.0", description="up"))
+    manifest = source_manifest(
+        _source_with_manifest(tmp_path, version="0.6.0", description="up")
+    )
     spec = PluginSpec(
-        name="kit", source_key="s", description="a curated subset", skills=["skills/a/b"]
+        name="kit",
+        source_key="s",
+        description="a curated subset",
+        skills=["skills/a/b"],
     )
     assert [f for f, _, _ in drift(spec, manifest)] == []
 
@@ -459,13 +482,16 @@ def test_build_refuses_a_plugin_with_no_description_anywhere(tmp_path):
     from trove.build import plugin_entry
 
     with pytest.raises(ValueError, match="no description"):
-        plugin_entry(PluginSpec(name="p", source_key="s"), Source(key="s", repo="o/s"), sha=None)
+        plugin_entry(
+            PluginSpec(name="p", source_key="s"), Source(key="s", repo="o/s"), sha=None
+        )
 
 
 def _serve(directory: Path, roots: dict | None = None):
+    import threading
     from functools import partial
     from http.server import ThreadingHTTPServer
-    import threading
+
     from trove.cli import PreviewHandler
 
     server = ThreadingHTTPServer(
@@ -500,7 +526,9 @@ def test_preview_server_ignores_a_conditional_request(tmp_path):
     server = _serve(tmp_path)
     try:
         url = f"http://127.0.0.1:{server.server_address[1]}/index.html"
-        request = Request(url, headers={"If-Modified-Since": "Mon, 01 Jan 2035 00:00:00 GMT"})
+        request = Request(
+            url, headers={"If-Modified-Since": "Mon, 01 Jan 2035 00:00:00 GMT"}
+        )
         with urlopen(request) as response:
             assert response.status == 200
             assert response.read() == b"<p>one</p>"
@@ -528,14 +556,18 @@ def test_serve_refuses_a_directory_with_no_catalog(tmp_path):
 
 
 def test_a_trailing_slash_curates_a_whole_subtree():
-    spec = PluginSpec(name="p", source_key="s", description="d", skills=["./skills/review/"])
+    spec = PluginSpec(
+        name="p", source_key="s", description="d", skills=["./skills/review/"]
+    )
     assert spec.selects("skills/review/go-review")
     assert spec.selects("skills/review/tidy")
     assert not spec.selects("skills/craft/tidy")
 
 
 def test_no_trailing_slash_still_means_one_exact_skill():
-    spec = PluginSpec(name="p", source_key="s", description="d", skills=["skills/review/go"])
+    spec = PluginSpec(
+        name="p", source_key="s", description="d", skills=["skills/review/go"]
+    )
     assert spec.selects("skills/review/go")
     assert not spec.selects("skills/review/go-review")
 
@@ -546,7 +578,9 @@ def test_subtree_curation_survives_into_the_manifest(tmp_path):
     for rel in ("skills/review/one", "skills/craft/two"):
         d = tmp_path / "repo" / rel
         d.mkdir(parents=True)
-        (d / "SKILL.md").write_text(f"---\nname: {Path(rel).name}\ndescription: d\n---\nbody\n")
+        (d / "SKILL.md").write_text(
+            f"---\nname: {Path(rel).name}\ndescription: d\n---\nbody\n"
+        )
     bundle = tmp_path / "b.yaml"
     bundle.write_text(
         f"name: t\ndescription: d\nowner: {{name: o}}\n"
@@ -580,7 +614,9 @@ def _local_bundle(tmp_path: Path, *, checkout: bool, override: str = "") -> Path
     if checkout:
         (repo / ".claude-plugin").mkdir(parents=True)
         (repo / ".claude-plugin" / "plugin.json").write_text(
-            json.dumps({"name": "p", "version": "2.0.0", "description": "upstream text"})
+            json.dumps(
+                {"name": "p", "version": "2.0.0", "description": "upstream text"}
+            )
         )
     bundle = tmp_path / "b.yaml"
     local_line = f"local: {repo}, " if checkout else ""
@@ -596,8 +632,18 @@ def _marketplace(tmp_path: Path) -> dict:
     return {
         "name": "local",
         "plugins": [
-            {"name": "p", "description": "stale", "version": "0.0.1", "source": "./plugins/p"},
-            {"name": "untouched", "description": "keep me", "version": "9.9.9", "source": "./plugins/untouched"},
+            {
+                "name": "p",
+                "description": "stale",
+                "version": "0.0.1",
+                "source": "./plugins/p",
+            },
+            {
+                "name": "untouched",
+                "description": "keep me",
+                "version": "9.9.9",
+                "source": "./plugins/untouched",
+            },
         ],
     }
 
@@ -605,7 +651,9 @@ def _marketplace(tmp_path: Path) -> dict:
 def test_sync_local_proposes_the_upstream_values(tmp_path):
     from trove.local import plan
 
-    changes, absent, unsourced = plan(load_bundle(_local_bundle(tmp_path, checkout=True)), _marketplace(tmp_path))
+    changes, _absent, unsourced = plan(
+        load_bundle(_local_bundle(tmp_path, checkout=True)), _marketplace(tmp_path)
+    )
     assert sorted((n, f, new) for n, f, _, new in changes) == [
         ("p", "description", "upstream text"),
         ("p", "version", "2.0.0"),
@@ -616,7 +664,9 @@ def test_sync_local_proposes_the_upstream_values(tmp_path):
 def test_sync_local_syncs_a_deliberate_bundle_override(tmp_path):
     from trove.local import plan
 
-    bundle = _local_bundle(tmp_path, checkout=True, override=", description: a curated subset")
+    bundle = _local_bundle(
+        tmp_path, checkout=True, override=", description: a curated subset"
+    )
     changes, _, _ = plan(load_bundle(bundle), _marketplace(tmp_path))
     assert ("p", "description", "stale", "a curated subset") in changes
 
@@ -624,7 +674,9 @@ def test_sync_local_syncs_a_deliberate_bundle_override(tmp_path):
 def test_sync_local_refuses_to_sync_a_source_with_no_checkout(tmp_path):
     from trove.local import plan
 
-    changes, _, unsourced = plan(load_bundle(_local_bundle(tmp_path, checkout=False)), _marketplace(tmp_path))
+    changes, _, unsourced = plan(
+        load_bundle(_local_bundle(tmp_path, checkout=False)), _marketplace(tmp_path)
+    )
     assert changes == []
     assert unsourced == ["p"]
 
@@ -660,10 +712,16 @@ def test_sync_local_dry_run_writes_nothing(tmp_path):
     target = tmp_path / "marketplace.json"
     original = json.dumps(_marketplace(tmp_path), indent=2)
     target.write_text(original)
-    code = main([
-        "--bundle", str(_local_bundle(tmp_path, checkout=True)),
-        "sync-local", "--marketplace", str(target), "--dry-run",
-    ])
+    code = main(
+        [
+            "--bundle",
+            str(_local_bundle(tmp_path, checkout=True)),
+            "sync-local",
+            "--marketplace",
+            str(target),
+            "--dry-run",
+        ]
+    )
     assert code == 0
     assert target.read_text() == original
 
@@ -674,10 +732,18 @@ def test_sync_local_writes_a_backup_before_changing_anything(tmp_path):
     target = tmp_path / "marketplace.json"
     original = json.dumps(_marketplace(tmp_path), indent=2)
     target.write_text(original)
-    assert main([
-        "--bundle", str(_local_bundle(tmp_path, checkout=True)),
-        "sync-local", "--marketplace", str(target),
-    ]) == 0
+    assert (
+        main(
+            [
+                "--bundle",
+                str(_local_bundle(tmp_path, checkout=True)),
+                "sync-local",
+                "--marketplace",
+                str(target),
+            ]
+        )
+        == 0
+    )
     assert json.loads(target.read_text())["plugins"][0]["version"] == "2.0.0"
     assert target.with_suffix(".json.bak").read_text() == original
 
@@ -685,10 +751,18 @@ def test_sync_local_writes_a_backup_before_changing_anything(tmp_path):
 def test_sync_local_fails_when_the_marketplace_is_missing(tmp_path):
     from trove.cli import main
 
-    assert main([
-        "--bundle", str(_local_bundle(tmp_path, checkout=True)),
-        "sync-local", "--marketplace", str(tmp_path / "nope.json"),
-    ]) == 1
+    assert (
+        main(
+            [
+                "--bundle",
+                str(_local_bundle(tmp_path, checkout=True)),
+                "sync-local",
+                "--marketplace",
+                str(tmp_path / "nope.json"),
+            ]
+        )
+        == 1
+    )
 
 
 # --- fetching a source that has no local checkout ---
@@ -699,11 +773,15 @@ def _remote_repo(tmp_path: Path, name: str = "remote", subdir: str = "") -> Path
     root = work / subdir if subdir else work
     skill = root / "skills" / "craft" / "tidy"
     skill.mkdir(parents=True)
-    (skill / "SKILL.md").write_text("---\nname: tidy\ndescription: Tidy things up.\n---\nbody\n")
+    (skill / "SKILL.md").write_text(
+        "---\nname: tidy\ndescription: Tidy things up.\n---\nbody\n"
+    )
     manifest = root / ".claude-plugin"
     manifest.mkdir(parents=True)
     (manifest / "plugin.json").write_text(
-        json.dumps({"name": "remote", "version": "2.1.0", "description": "From the source"})
+        json.dumps(
+            {"name": "remote", "version": "2.1.0", "description": "From the source"}
+        )
     )
     _git("init", "-q", "-b", "main", cwd=work)
     _git("config", "user.email", "t@example.com", cwd=work)
@@ -753,7 +831,9 @@ def test_a_missing_local_path_falls_back_to_the_remote_with_a_note(tmp_path):
     )
     workspace = Workspace(cache=tmp_path / "cache")
     assert [s.name for s in scan_source(source, workspace.root(source))] == ["tidy"]
-    assert any("does not exist" in note and "fetching" in note for note in workspace.notes)
+    assert any(
+        "does not exist" in note and "fetching" in note for note in workspace.notes
+    )
 
 
 def test_a_missing_local_path_still_fails_when_fetching_is_off(tmp_path):
@@ -783,7 +863,9 @@ def test_a_subdir_source_resolves_inside_the_fetched_checkout(tmp_path):
     assert [s.name for s in scan_source(source, root)] == ["tidy"]
 
 
-def test_a_remote_only_plugin_inherits_its_description_from_the_fetched_manifest(tmp_path):
+def test_a_remote_only_plugin_inherits_its_description_from_the_fetched_manifest(
+    tmp_path,
+):
     from trove.build import build_marketplace
     from trove.fetch import Workspace
 
@@ -812,7 +894,9 @@ def test_curated_paths_are_verified_against_a_fetched_source(tmp_path):
     )
     with pytest.raises(ValueError, match="match no skill"):
         build_marketplace(
-            load_bundle(bundle), pin=False, workspace=Workspace(cache=tmp_path / "cache")
+            load_bundle(bundle),
+            pin=False,
+            workspace=Workspace(cache=tmp_path / "cache"),
         )
 
 
@@ -837,7 +921,11 @@ def test_a_qualified_annotated_tag_peels_to_its_commit(tmp_path):
 
     work = _repo_with_ambiguous_refs(tmp_path)
     commit = subprocess.run(
-        ["git", "rev-parse", "main"], cwd=work, capture_output=True, text=True, check=True
+        ["git", "rev-parse", "main"],
+        cwd=work,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.strip()
     for ref in ("refs/tags/release", "refs/heads/release"):
         assert resolve_sha(Source(key="s", url=str(work), ref=ref)) == commit
@@ -869,7 +957,9 @@ def test_a_subdir_source_carries_its_prefix_into_the_body_base():
 def test_an_unpinned_source_falls_back_to_the_serve_route(tmp_path):
     from trove.catalog import body_base
 
-    assert body_base("s", Source(key="s", repo="o/s", local=tmp_path), None) == "body/s/"
+    assert (
+        body_base("s", Source(key="s", repo="o/s", local=tmp_path), None) == "body/s/"
+    )
 
 
 def test_a_source_git_does_not_serve_publicly_falls_back_to_the_serve_route(tmp_path):
@@ -1092,7 +1182,9 @@ def test_findings_are_carried_on_the_skill_and_into_the_catalog(tmp_path):
 
     d = tmp_path / "repo" / "skills" / "craft" / "Bad_Name"
     d.mkdir(parents=True)
-    (d / "SKILL.md").write_text("---\nname: Bad_Name\ndescription: Does a thing.\n---\nbody\n")
+    (d / "SKILL.md").write_text(
+        "---\nname: Bad_Name\ndescription: Does a thing.\n---\nbody\n"
+    )
     bundle = tmp_path / "b.yaml"
     bundle.write_text(
         f"name: t\nsources:\n  s: {{repo: o/s, local: {tmp_path / 'repo'}}}\n"

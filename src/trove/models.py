@@ -50,10 +50,13 @@ class Skill:
     strict_yaml: bool = True
     bundled_files: int = 0
     bundled_chars: int = 0
+    category_is_fallback: bool = False
 
     @property
     def tokens_always_on(self) -> int:
-        return round(self.frontmatter_chars / CHARS_PER_TOKEN_FRONTMATTER + FRONTMATTER_OVERHEAD)
+        return round(
+            self.frontmatter_chars / CHARS_PER_TOKEN_FRONTMATTER + FRONTMATTER_OVERHEAD
+        )
 
     @property
     def tokens_on_invoke(self) -> int:
@@ -74,6 +77,7 @@ class Skill:
             "path": self.rel_path,
             "source": self.source_key,
             "category": self.category,
+            "categoryIsFallback": self.category_is_fallback,
             "tokensAlwaysOn": self.tokens_always_on,
             "tokensOnInvoke": self.tokens_on_invoke,
             "bundledFiles": self.bundled_files,
@@ -106,7 +110,9 @@ class PluginSpec:
         if not self.skills:
             return True
         return any(
-            rel_path.startswith(selection) if selection.endswith("/") else rel_path == selection
+            rel_path.startswith(selection)
+            if selection.endswith("/")
+            else rel_path == selection
             for selection in self.selections
         )
 
