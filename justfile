@@ -3,6 +3,8 @@
 bundle := "bundles/local.yaml"
 out := "out"
 port := "8787"
+marketplace := ""
+mflag := if marketplace == "" { "" } else { "--marketplace " + marketplace }
 gif_filter := "fps=10,scale=1000:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5"
 
 # Show available recipes
@@ -69,6 +71,10 @@ sync-local:
 promote name source *args:
     uv run trove --bundle {{ bundle }} promote {{ name }} --source {{ source }} {{ args }}
 
+# Report which of the bundle's plugins this machine has, e.g. `just installed --marketplace other-name`
+installed *args:
+    uv run trove --bundle {{ bundle }} --out {{ out }} installed {{ mflag }} {{ args }}
+
 # Report bundle fields that disagree with their source plugin.json
 drift:
     uv run trove --bundle {{ bundle }} drift
@@ -89,11 +95,11 @@ lint:
 
 # Build the catalog and serve it
 serve: catalog
-    uv run trove --out {{ out }} serve --port {{ port }}
+    uv run trove --bundle {{ bundle }} --out {{ out }} serve --port {{ port }} {{ mflag }}
 
 # Stop every trove preview server this project started
 stop:
-    @pkill -f 'trove --out' && echo "stopped" || echo "none running"
+    @pkill -f 'trove .*serve --port' && echo "stopped" || echo "none running"
 
 # Open the served catalog in a browser
 open:
@@ -113,7 +119,7 @@ verify: catalog
       echo "port {{ port }} is already serving — run 'just stop', or pass --set port NNNN" >&2
       exit 1
     fi
-    uv run trove --out {{ out }} serve --port {{ port }} >/dev/null 2>&1 &
+    uv run trove --bundle {{ bundle }} --out {{ out }} serve --port {{ port }} {{ mflag }} >/dev/null 2>&1 &
     server=$!
     trap 'kill $server 2>/dev/null || true' EXIT
     until curl -sf -o /dev/null http://127.0.0.1:{{ port }}/catalog.json; do
@@ -130,7 +136,7 @@ shots dir="shots": catalog
       echo "port {{ port }} is already serving — run 'just stop', or pass --set port NNNN" >&2
       exit 1
     fi
-    uv run trove --out {{ out }} serve --port {{ port }} >/dev/null 2>&1 &
+    uv run trove --bundle {{ bundle }} --out {{ out }} serve --port {{ port }} {{ mflag }} >/dev/null 2>&1 &
     server=$!
     trap 'kill $server 2>/dev/null || true' EXIT
     until curl -sf -o /dev/null http://127.0.0.1:{{ port }}/catalog.json; do
@@ -152,7 +158,7 @@ demo storyboard="scripts/demo.yml" video="out/demo.mp4": catalog
       echo "port {{ port }} is already serving — run 'just stop', or pass --set port NNNN" >&2
       exit 1
     fi
-    uv run trove --out {{ out }} serve --port {{ port }} >/dev/null 2>&1 &
+    uv run trove --bundle {{ bundle }} --out {{ out }} serve --port {{ port }} {{ mflag }} >/dev/null 2>&1 &
     server=$!
     trap 'kill $server 2>/dev/null || true' EXIT
     until curl -sf -o /dev/null http://127.0.0.1:{{ port }}/catalog.json; do

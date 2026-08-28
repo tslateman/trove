@@ -125,3 +125,4 @@ class Bundle:
     sources: dict[str, Source]
     plugins: list[PluginSpec]
     renames: dict[str, str] = field(default_factory=dict)
+    marketplace: str | None = None

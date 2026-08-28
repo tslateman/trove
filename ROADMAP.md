@@ -47,6 +47,11 @@ and reaching sources git does not serve publicly.
       `body/<source>/` for everything else, which `trove serve` answers from the
       checkout on disk. A source with no checkout and no public pin still has
       nowhere to resolve from, so a private remote needs a fetching endpoint.
+- [x] **Tell installed from offered.** `trove serve` answers `/installed.json`
+      from `claude plugin list --json`, so the catalog filters by what this
+      machine has, prices what it loads today, and tells a plugin that is
+      installed from one that is enabled. `trove installed` prints the same
+      reading. A published build has no endpoint and says how to get one.
 
 ## Security and governance
 

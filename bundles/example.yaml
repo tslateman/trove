@@ -5,6 +5,11 @@ description: A starter registry — copy this, point it at your own repos
 owner:
   name: Your Team
 
+# Optional. The name a machine files this registry under, which is what
+# `claude plugin marketplace add` called it. Only needed when it differs from
+# `name` above; `trove installed` and the catalog's Installed filter join on it.
+# marketplace: example
+
 sources:
   # A whole repo of skills. `local` is optional and enables `trove scan`
   # before the remote exists; it resolves relative to this file.

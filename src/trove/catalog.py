@@ -104,6 +104,7 @@ def build_catalog(bundle: Bundle, workspace: Workspace | None = None) -> dict:
     records.sort(key=lambda r: (r["category"], r["name"]))
     return {
         "registry": bundle.name,
+        "marketplace": bundle.marketplace or bundle.name,
         "description": bundle.description,
         "owner": bundle.owner,
         "sources": {

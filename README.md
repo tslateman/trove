@@ -54,6 +54,7 @@ just sync-local        # apply them
 just orphans       # skills no plugin ships
 just promote name source   # copy a personal skill into a source checkout and lint it
 just twins         # skill names more than one source ships
+just installed     # which of the bundle's plugins this machine has
 just calibrate skills skills@local   # check estimates against Claude Code
 ```
 
@@ -102,6 +103,8 @@ plugins:
 
 renames:
   duet: skills # deprecate without breaking installs
+
+marketplace: mine # optional; only when a machine files this registry under another name
 ```
 
 ![Switching to the Plugins view: the whole-repo plugin beside the curated review-kit plugin, which ships a subset and carries a curated pill](docs/demo-curated.gif)
@@ -140,6 +143,45 @@ into one stack still works: the generated snippet groups by source and emits
 a plugin block per source, each scoped to only the skills you picked from it.
 
 ![Filtering to a plugin from one repo, picking a skill, filtering to a plugin from another repo, picking a second skill: the composed bundle splits into a block per source](docs/demo-mixing.gif)
+
+## Installed, not just offered
+
+The catalog is what a registry offers. What a machine has is a different
+question, and Claude Code already answers it: `claude plugin list --json`
+reports every installed plugin, the version it holds, and whether it is
+enabled.
+
+`trove serve` asks that question on every request and answers `/installed.json`
+from it. The Skills tab then carries an Installed filter and a badge per row,
+each Plugins row shows its state on this machine and the command that fits it
+(install, enable, or update), and the header prices what this machine loads
+today beside what installing everything would cost. `just installed` prints the
+same reading in the terminal, one row per plugin, offered version beside
+installed version.
+
+```bash
+just installed
+just --set marketplace other-name installed   # when the names differ
+```
+
+The reading joins on `<plugin>@<marketplace>`, which is the id Claude Code
+files an install under. A bundle whose name is not the name teammates added the
+marketplace under records the difference:
+
+```yaml
+name: my-registry
+marketplace: the-name-claude-code-knows
+```
+
+A published build has no endpoint to ask, so it carries no install state and
+says how to get some instead. The same panel opens whenever the reading comes
+back empty, and it names the specific reason: a page with no server behind it,
+no `claude` on PATH, a registry nobody has added yet, or a marketplace name
+that does not match. In that last case the panel names the marketplace your
+machine does file these plugins under, and offers the line that records it.
+
+Install state never reaches `out/`, so publishing the catalog publishes nothing
+about who installed what.
 
 ## Twins
 

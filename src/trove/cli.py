@@ -13,7 +13,7 @@ from urllib.parse import unquote
 
 from .build import build_marketplace, dumps
 from .catalog import build_catalog
-from . import local
+from . import installed, local
 from .fetch import Workspace, default_cache
 from .lint import FINDINGS
 from .loader import load_bundle
@@ -55,7 +55,11 @@ def cmd_scan(args: argparse.Namespace) -> int:
         if args.verbose:
             print(f"  {'skill':<34} {'always':>5} {'fires':>7} {'bundled':>9}  path")
             for s in skills:
-                bundled = f"{s.bundled_files}f ≤{s.tokens_bundled_max}" if s.bundled_files else ""
+                bundled = (
+                    f"{s.bundled_files}f ≤{s.tokens_bundled_max}"
+                    if s.bundled_files
+                    else ""
+                )
                 print(
                     f"  {s.name:<34} {s.tokens_always_on:>5} {s.tokens_on_invoke:>7} "
                     f"{bundled:>9}  {s.rel_path}"
@@ -121,7 +125,9 @@ def cmd_promote(args: argparse.Namespace) -> int:
             f"bundle names no source {args.source!r}; it has {sorted(bundle.sources)}"
         )
     source = bundle.sources[args.source]
-    skill_dir = (args.source_dir or Path.home() / ".claude" / "skills" / args.name).expanduser()
+    skill_dir = (
+        args.source_dir or Path.home() / ".claude" / "skills" / args.name
+    ).expanduser()
     dest, skill = promote(skill_dir, source, args.into)
     root = dest.parent
     while root != root.parent and not (root / ".git").exists():
@@ -140,8 +146,12 @@ def cmd_promote(args: argparse.Namespace) -> int:
         f"{skill.tokens_on_invoke:,} when it fires"
     )
 
-    whole = [p.name for p in bundle.plugins if p.source_key == source.key and not p.skills]
-    curated = [p.name for p in bundle.plugins if p.source_key == source.key and p.skills]
+    whole = [
+        p.name for p in bundle.plugins if p.source_key == source.key and not p.skills
+    ]
+    curated = [
+        p.name for p in bundle.plugins if p.source_key == source.key and p.skills
+    ]
     print("\nnext:")
     print(f"  git -C {root} add {rel}")
     print(f"  git -C {root} commit -m 'Add {skill.name}' && git -C {root} push")
@@ -151,17 +161,89 @@ def cmd_promote(args: argparse.Namespace) -> int:
             f"skills: in {args.bundle}"
         )
     if whole:
-        print(f"  # {', '.join(whole)} ships the whole source, so the next build carries it")
+        print(
+            f"  # {', '.join(whole)} ships the whole source, so the next build carries it"
+        )
     if not whole and not curated:
-        print(f"  # no plugin in {args.bundle} ships source {source.key!r} yet; add one")
+        print(
+            f"  # no plugin in {args.bundle} ships source {source.key!r} yet; add one"
+        )
     print("  just dist")
     for name in whole:
         print(
             f"  claude plugin install {name}@{bundle.name}"
             f"   # teammates; already installed: claude plugin update {name}@{bundle.name}"
         )
-    print(f"  rm -r {skill_dir}   # once the plugin copy is installed, or you become your own twin")
+    print(
+        f"  rm -r {skill_dir}   # once the plugin copy is installed, or you become your own twin"
+    )
     return 1 if skill.lint else 0
+
+
+def cmd_installed(args: argparse.Namespace) -> int:
+    bundle = load_bundle(args.bundle)
+    workspace = workspace_for(args)
+    catalog = build_catalog(bundle, workspace=workspace)
+    report(workspace)
+    state = installed.survey(catalog, args.marketplace)
+    name = state["marketplace"]
+
+    if not state["available"]:
+        print(f"cannot read this machine: {state['reason']}", file=sys.stderr)
+        return 1
+
+    where = "configured" if state["configured"] else "not a marketplace on this machine"
+    print(f"marketplace {name!r} ({where})\n")
+    print(f"{'plugin':<28}{'offered':>9}{'installed':>11}  state")
+    for plugin in catalog["plugins"]:
+        record = state["plugins"].get(plugin["name"])
+        offered = plugin["version"] or "—"
+        if record is None:
+            print(f"{plugin['name']:<28}{offered:>9}{'—':>11}  not installed")
+            continue
+        marks = ["enabled" if record["enabled"] else "installed, disabled"]
+        if record["update"]:
+            marks.append("update")
+        if len(set(record["scopes"])) > 1:
+            marks.append("both scopes")
+        print(
+            f"{plugin['name']:<28}{offered:>9}{record['version'] or '—':>11}  "
+            f"{', '.join(marks)}"
+        )
+
+    totals, charged = state["totals"], installed.cost(catalog, state)
+    print(
+        f"\n{totals['plugins']} of {len(catalog['plugins'])} plugins installed, "
+        f"{totals['enabled']} enabled"
+    )
+    print(
+        f"~{charged['alwaysOn']:,} tok always-on from the {charged['enabledSkills']} "
+        f"skills enabled here, of ~{catalog['totals']['alwaysOn']:,} offered"
+    )
+    if not state["plugins"]:
+        print("\nnothing from this registry is installed. To fix the reading:")
+        hint = state.get("suggest")
+        if hint:
+            print(
+                f"  # your machine ships {hint['matches']} of these plugin names under "
+                f"{hint['marketplace']!r}"
+            )
+            print(
+                f"  trove --bundle {args.bundle} installed --marketplace {hint['marketplace']}"
+            )
+            print(
+                f"  # to keep it: add `marketplace: {hint['marketplace']}` to {args.bundle}"
+            )
+        else:
+            add = installed.local_marketplace(args.out)
+            print(
+                f"  just dist   # writes {args.out}/.claude-plugin/marketplace.json"
+                if not add
+                else ""
+            )
+            print(f"  claude plugin marketplace add {add or args.out.resolve()}")
+            print(f"  claude plugin install {catalog['plugins'][0]['name']}@{name}")
+    return 0
 
 
 def cmd_drift(args: argparse.Namespace) -> int:
@@ -203,7 +285,10 @@ def cmd_sync_local(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
     for name in absent:
-        print(f"{name}: not in the local marketplace — add it with `claude plugin install`", file=sys.stderr)
+        print(
+            f"{name}: not in the local marketplace — add it with `claude plugin install`",
+            file=sys.stderr,
+        )
 
     if not changes:
         print(f"{args.marketplace.name}: already matches every source plugin.json")
@@ -222,9 +307,13 @@ def cmd_sync_local(args: argparse.Namespace) -> int:
     backup.write_text(args.marketplace.read_text(encoding="utf-8"), encoding="utf-8")
     updated = local.apply(manifest, changes)
     temp = args.marketplace.with_suffix(".json.tmp")
-    temp.write_text(json.dumps(updated, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    temp.write_text(
+        json.dumps(updated, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     temp.replace(args.marketplace)
-    print(f"\nwrote {len(changes)} change(s) to {args.marketplace} (backup at {backup.name})")
+    print(
+        f"\nwrote {len(changes)} change(s) to {args.marketplace} (backup at {backup.name})"
+    )
     return 0
 
 
@@ -232,7 +321,9 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
     bundle = load_bundle(args.bundle)
     source = bundle.sources[args.source]
     workspace = workspace_for(args)
-    estimated = {s.name: s.tokens_always_on for s in scan_source(source, workspace.root(source))}
+    estimated = {
+        s.name: s.tokens_always_on for s in scan_source(source, workspace.root(source))
+    }
     report(workspace)
     if not estimated:
         print(f"no skills indexed for {args.source}", file=sys.stderr)
@@ -267,14 +358,56 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
 
 
 BODY_PREFIX = "/body/"
+INSTALLED_PATH = "/installed.json"
 
 
 class PreviewHandler(SimpleHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
-    def __init__(self, *args, roots: dict[str, Path] | None = None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        roots: dict[str, Path] | None = None,
+        marketplace: str | None = None,
+        **kwargs,
+    ):
         self.roots = roots or {}
+        self.marketplace = marketplace
         super().__init__(*args, **kwargs)
+
+    def do_GET(self) -> None:
+        """Answer `/installed.json` from this machine.
+
+        It is computed per request and never written into the build, so a
+        published catalog carries no trace of who installed what.
+        """
+        clean = self.path.split("?", 1)[0].split("#", 1)[0]
+        if clean == INSTALLED_PATH:
+            return self.send_installed()
+        return super().do_GET()
+
+    def send_installed(self) -> None:
+        site = Path(self.directory)
+        try:
+            catalog = json.loads((site / "catalog.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            payload = {
+                "available": False,
+                "reason": f"cannot read catalog.json beside the page: {exc}",
+                "plugins": {},
+                "totals": {"plugins": 0, "enabled": 0},
+            }
+        else:
+            payload = installed.survey(catalog, self.marketplace)
+            add = installed.local_marketplace(site)
+            if add:
+                payload["add"] = add
+        body = (json.dumps(payload, indent=2) + "\n").encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def translate_path(self, path: str) -> str:
         """Answer `/body/<source>/<rest>` from that source's checkout.
@@ -318,7 +451,12 @@ def cmd_serve(args: argparse.Namespace) -> int:
     if not (args.out / "index.html").exists():
         raise RuntimeError(f"{args.out} has no index.html — run `trove catalog` first")
     roots = body_roots(args.bundle)
-    handler = partial(PreviewHandler, directory=str(args.out), roots=roots)
+    handler = partial(
+        PreviewHandler,
+        directory=str(args.out),
+        roots=roots,
+        marketplace=args.marketplace,
+    )
     try:
         server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
     except OSError as exc:
@@ -327,6 +465,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
             "there; stop it or choose another port"
         ) from exc
     print(f"serving {args.out.resolve()} at http://127.0.0.1:{args.port}")
+    print("  /installed.json -> what `claude plugin list` reports for this registry")
     for key, root in sorted(roots.items()):
         print(f"  /body/{key}/ -> {root}")
     server.serve_forever()
@@ -371,13 +510,17 @@ def main(argv: list[str] | None = None) -> int:
     scan.set_defaults(func=cmd_scan)
 
     build = sub.add_parser("build", help="emit marketplace.json from the bundle")
-    build.add_argument("--no-pin", action="store_true", help="skip git ls-remote sha resolution")
+    build.add_argument(
+        "--no-pin", action="store_true", help="skip git ls-remote sha resolution"
+    )
     build.set_defaults(func=cmd_build)
 
     catalog = sub.add_parser("catalog", help="emit catalog.json and the static site")
     catalog.set_defaults(func=cmd_catalog)
 
-    sync = sub.add_parser("sync-local", help="update the local marketplace from each source plugin.json")
+    sync = sub.add_parser(
+        "sync-local", help="update the local marketplace from each source plugin.json"
+    )
     sync.add_argument("--marketplace", type=Path, default=local.DEFAULT_MARKETPLACE)
     sync.add_argument("--dry-run", action="store_true")
     sync.set_defaults(func=cmd_sync_local)
@@ -385,29 +528,52 @@ def main(argv: list[str] | None = None) -> int:
     lint = sub.add_parser("lint", help="report skills that discovery cannot use")
     lint.set_defaults(func=cmd_lint)
 
-    drift_cmd = sub.add_parser("drift", help="report bundle fields that disagree with the source plugin.json")
+    drift_cmd = sub.add_parser(
+        "drift", help="report bundle fields that disagree with the source plugin.json"
+    )
     drift_cmd.set_defaults(func=cmd_drift)
 
     promote_cmd = sub.add_parser(
         "promote", help="copy a personal skill into a source checkout and lint it"
     )
     promote_cmd.add_argument("name", help="skill directory name under ~/.claude/skills")
-    promote_cmd.add_argument("--source", required=True, help="bundle source key to promote into")
     promote_cmd.add_argument(
-        "--from", dest="source_dir", type=Path, help="skill directory, when not under ~/.claude/skills"
+        "--source", required=True, help="bundle source key to promote into"
     )
     promote_cmd.add_argument(
-        "--into", help="directory under the source root; default: skills/ if it exists, else the root"
+        "--from",
+        dest="source_dir",
+        type=Path,
+        help="skill directory, when not under ~/.claude/skills",
+    )
+    promote_cmd.add_argument(
+        "--into",
+        help="directory under the source root; default: skills/ if it exists, else the root",
     )
     promote_cmd.set_defaults(func=cmd_promote)
 
-    calibrate = sub.add_parser("calibrate", help="compare estimates against claude plugin details")
+    installed_cmd = sub.add_parser(
+        "installed", help="report which of the bundle's plugins this machine has"
+    )
+    installed_cmd.add_argument(
+        "--marketplace",
+        help="name this registry was added under, when it differs from the bundle name",
+    )
+    installed_cmd.set_defaults(func=cmd_installed)
+
+    calibrate = sub.add_parser(
+        "calibrate", help="compare estimates against claude plugin details"
+    )
     calibrate.add_argument("source")
     calibrate.add_argument("plugin")
     calibrate.set_defaults(func=cmd_calibrate)
 
     serve = sub.add_parser("serve", help="serve the built site")
     serve.add_argument("--port", type=int, default=8787)
+    serve.add_argument(
+        "--marketplace",
+        help="name this registry was added under, when it differs from the bundle name",
+    )
     serve.set_defaults(func=cmd_serve)
 
     cache = sub.add_parser("cache", help="report or clear the fetched-source cache")

@@ -1315,3 +1315,192 @@ def test_promote_surfaces_lint_findings_on_the_copy(tmp_path):
     _, skill = promote(personal, Source(key="team", local=root))
 
     assert skill.lint == ["trigger"]
+
+
+# --- what this machine has installed ---
+
+ENTRIES = [
+    {"id": "toolkit@acme-plugins", "version": "0.1.0", "scope": "user", "enabled": True},
+    {
+        "id": "toolkit@acme-plugins",
+        "version": "0.2.0",
+        "scope": "local",
+        "enabled": False,
+        "projectPath": "/repo",
+    },
+    {"id": "review-kit@acme-plugins", "version": "0.1.0", "scope": "user", "enabled": False},
+    {"id": "platform@somewhere-else", "version": "1.0.0", "scope": "user", "enabled": True},
+]
+OFFERED = {"toolkit", "review-kit", "drafts"}
+CATALOG = {
+    "registry": "acme",
+    "marketplace": "acme-plugins",
+    "plugins": [
+        {"name": "toolkit", "version": "0.4.1"},
+        {"name": "review-kit", "version": "0.1.0"},
+        {"name": "drafts", "version": "0.1.0"},
+    ],
+    "skills": [
+        {"name": "a", "plugins": ["toolkit"], "tokensAlwaysOn": 100},
+        {"name": "b", "plugins": ["review-kit"], "tokensAlwaysOn": 10},
+        {"name": "c", "plugins": ["drafts"], "tokensAlwaysOn": 1},
+    ],
+    "totals": {"skills": 3, "alwaysOn": 111},
+}
+
+
+def _machine(monkeypatch, entries=None, marketplaces=("acme-plugins",)):
+    from trove import installed
+
+    def fake(command):
+        return (
+            list(ENTRIES if entries is None else entries)
+            if command == installed.PLUGINS
+            else [{"name": name} for name in marketplaces]
+        )
+
+    monkeypatch.setattr(installed, "ask", fake)
+
+
+def test_a_plugin_installed_at_both_scopes_reports_the_version_claude_loads():
+    from trove.installed import collect
+
+    found = collect(ENTRIES, "acme-plugins", OFFERED)
+    assert found["toolkit"]["enabled"] is True
+    assert found["toolkit"]["version"] == "0.1.0"
+    assert found["toolkit"]["projects"] == ["/repo"]
+    assert sorted(found["toolkit"]["scopes"]) == ["local", "user"]
+
+
+def test_another_marketplace_shipping_the_same_name_is_not_this_registrys_install():
+    from trove.installed import collect
+
+    assert "platform" not in collect(ENTRIES, "acme-plugins", OFFERED | {"platform"})
+
+
+def test_a_registry_nobody_installed_names_the_marketplace_that_ships_it():
+    from trove.installed import suggest
+
+    assert suggest(ENTRIES, OFFERED, "acme") == {
+        "marketplace": "acme-plugins",
+        "matches": 2,
+    }
+
+
+def test_a_bundle_that_matches_its_marketplace_gets_no_suggestion():
+    from trove.installed import suggest
+
+    assert suggest(ENTRIES, OFFERED, "acme-plugins") is None
+
+
+@pytest.mark.parametrize(
+    "override,expected",
+    [(None, "acme-plugins"), ("other", "other")],
+)
+def test_the_marketplace_name_comes_from_the_override_then_the_bundle(
+    override, expected
+):
+    from trove.installed import marketplace_for
+
+    assert marketplace_for(CATALOG, override) == expected
+
+
+def test_a_bundle_that_names_no_marketplace_is_filed_under_its_own_name():
+    from trove.installed import marketplace_for
+
+    assert marketplace_for({"registry": "acme"}) == "acme"
+
+
+def test_the_catalog_carries_the_name_a_machine_files_the_registry_under(tmp_path):
+    from trove.catalog import build_catalog
+
+    bundle = tmp_path / "b.yaml"
+    bundle.write_text(
+        "name: acme\nmarketplace: acme-plugins\nsources: {}\nplugins: []\n"
+    )
+    assert build_catalog(load_bundle(bundle))["marketplace"] == "acme-plugins"
+
+
+def test_a_version_that_differs_from_the_offered_one_is_flagged_for_update(monkeypatch):
+    from trove import installed
+
+    _machine(monkeypatch)
+    state = installed.survey(CATALOG)
+    assert state["plugins"]["toolkit"]["update"] is True
+    assert state["plugins"]["review-kit"]["update"] is False
+    assert state["totals"] == {"plugins": 2, "enabled": 1}
+    assert state["configured"] is True
+
+
+def test_only_the_enabled_half_of_an_install_is_charged(monkeypatch):
+    from trove import installed
+
+    _machine(monkeypatch)
+    state = installed.survey(CATALOG)
+    assert installed.cost(CATALOG, state) == {
+        "skills": 2,
+        "enabledSkills": 1,
+        "alwaysOn": 100,
+    }
+
+
+def test_a_machine_without_the_claude_cli_reports_why_not_an_empty_install(monkeypatch):
+    from trove import installed
+
+    def missing(command):
+        raise FileNotFoundError(2, "No such file or directory", "claude")
+
+    monkeypatch.setattr(installed, "ask", missing)
+    state = installed.survey(CATALOG)
+    assert state["available"] is False
+    assert "claude" in state["reason"]
+    assert state["plugins"] == {}
+
+
+def test_the_build_that_carries_a_manifest_is_a_marketplace_you_can_add(tmp_path):
+    from trove.installed import local_marketplace
+
+    assert local_marketplace(tmp_path) is None
+    manifest = tmp_path / ".claude-plugin" / "marketplace.json"
+    manifest.parent.mkdir()
+    manifest.write_text("{}")
+    assert local_marketplace(tmp_path) == str(tmp_path.resolve())
+
+
+def test_serve_answers_installed_json_for_the_catalog_beside_the_page(
+    tmp_path, monkeypatch
+):
+    import json
+    from urllib.request import urlopen
+
+    _machine(monkeypatch)
+    (tmp_path / "index.html").write_text("<p>catalog</p>")
+    (tmp_path / "catalog.json").write_text(json.dumps(CATALOG))
+    server = _serve(tmp_path)
+    try:
+        port = server.server_address[1]
+        with urlopen(f"http://127.0.0.1:{port}/installed.json") as response:
+            payload = json.loads(response.read())
+        assert payload["marketplace"] == "acme-plugins"
+        assert sorted(payload["plugins"]) == ["review-kit", "toolkit"]
+        assert "add" not in payload
+    finally:
+        server.shutdown()
+
+
+def test_a_build_with_no_catalog_says_so_rather_than_claiming_nothing_is_installed(
+    tmp_path,
+):
+    import json
+    from urllib.request import urlopen
+
+    (tmp_path / "index.html").write_text("<p>catalog</p>")
+    server = _serve(tmp_path)
+    try:
+        port = server.server_address[1]
+        with urlopen(f"http://127.0.0.1:{port}/installed.json") as response:
+            payload = json.loads(response.read())
+        assert payload["available"] is False
+        assert "catalog.json" in payload["reason"]
+    finally:
+        server.shutdown()
