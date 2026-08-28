@@ -148,6 +148,19 @@ a.plain:hover .pill { border-color: var(--accent); color: var(--accent); }
 .setup .cmd button { border: 0; border-left: 1px solid var(--line); background: var(--panel);
   color: var(--muted); padding: 0 10px; cursor: pointer; font: 12px/1 var(--mono); }
 .setup .cmd button:hover { color: var(--accent); }
+.setup .import { display: grid; gap: 9px; margin-top: 13px; }
+.setup .import textarea {
+  width: 100%; min-height: 104px; resize: vertical; padding: 10px 11px; border-radius: 9px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--bg);
+  color: var(--ink); font: 12px/1.5 var(--mono);
+}
+.setup .import textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+.setup .import.dropping textarea { border-color: var(--accent); background: var(--accent-soft); }
+.setup .importacts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.setup .importacts p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.setup .oops { margin: 0; padding: 9px 11px; font-size: 13px; color: var(--accent);
+  border: 1px solid var(--accent); background: var(--accent-soft); border-radius: 8px; }
+.setup .oops code, .setup .oops b { color: inherit; }
 
 /* ---------- list ---------- */
 .list { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); overflow: hidden; }
@@ -482,6 +495,7 @@ const SORTS = { category: s => s.category, on: s => s.tokensAlwaysOn, fire: s =>
 const RAW_GITHUB = "https://raw.githubusercontent.com/";
 const FLAGS = ["lint", "picked", "twins", "installed", "absent"];
 const state = { data: null, machine: null, docs: [], page: "", panel: "", q: "", cat: null, plug: null,
+  importText: "", importError: "",
   flag: null, anchor: "", view: "skills", sort: { key: "name", dir: 1 }, picked: new Set(), open: new Set(), twins: new Set() };
 const $ = (id) => document.getElementById(id);
 // Two sources can ship the same skill name, so a pick is keyed by both.
@@ -490,7 +504,9 @@ const k = (n) => (n / 1000).toFixed(1) + "k";
 
 // The catalog is what the registry offers. `installed.json` is what this
 // machine has, and only `trove serve` answers for it: a published build has no
-// endpoint, so the page falls back to explaining how to get one.
+// endpoint, so the page reads a paste of `claude plugin list --json` instead.
+// The server runs the command now, so its answer outranks an older import —
+// but an answer it could not get is no answer, and the paste stands in.
 Promise.all([
   fetch("catalog.json").then(r => r.json()),
   fetch("installed.json").then(r => (r.ok ? r.json() : null)).catch(() => null),
@@ -498,35 +514,27 @@ Promise.all([
   fetch("docs/index.json").then(r => (r.ok ? r.json() : [])).catch(() => []),
 ]).then(([catalog, machine, docs]) => {
   state.data = catalog;
-  state.machine = machine;
   state.docs = docs || [];
+  state.machine = machine && machine.available ? machine : restoreImport() || machine;
   boot();
 });
 
 function boot() {
   applyTheme(stored(localStorage, "theme"));
   // A machine that installed these plugins under another name is a finding,
-  // so the steps that fix the reading open by themselves.
-  state.panel = state.machine && state.machine.suggest ? "installed" : "";
+  // and so is a remembered paste this build no longer matches: the steps that
+  // fix the reading open by themselves.
+  state.panel = (state.machine && state.machine.suggest) || state.importError ? "installed" : "";
   readUrl();
   for (const key of stored(sessionStorage, "picked") || []) state.picked.add(key);
   const d = state.data;
   $("regname").textContent = d.registry;
   for (const id of ["crumb-reg", "crumb-reg-p", "crumb-reg-a", "crumb-reg-d"]) $(id).textContent = d.registry;
   $("t-docs").hidden = state.docs.length === 0;
-  const nSources = Object.keys(d.sources).length;
   $("tagline").innerHTML = [
     escapeHtml(d.description || ""),
     docFile("README.md") ? docLink("What is Trove?", "README.md") : "",
   ].filter(Boolean).join(" · ");
-  $("totals").innerHTML = `<b>${d.totals.skills}</b> skills from <b>${nSources}</b> source${nSources === 1 ? "" : "s"}` +
-    ` · <b>${d.totals.alwaysOn.toLocaleString()}</b> tokens always-on if you install them all.` +
-    (hasInstalls() ? ` <b>${installedSkills().length}</b> of them are installed here, ` +
-      `<b>${enabledSkills().length}</b> enabled at <b>${liveCost().toLocaleString()}</b> tokens today.` : "");
-  $("ptotals").innerHTML = `<b>${d.plugins.length}</b> plugin${d.plugins.length === 1 ? "" : "s"} composed from ` +
-    `<b>${nSources}</b> source${nSources === 1 ? "" : "s"}. Each row carries its install command.` +
-    (hasInstalls() ? ` <b>${state.machine.totals.plugins}</b> installed on this machine, ` +
-      `<b>${state.machine.totals.enabled}</b> of those enabled.` : "");
 
   $("q").addEventListener("input", e => { state.q = e.target.value.toLowerCase(); writeUrl(); render(); });
   for (const v of VIEWS) $("t-" + v).addEventListener("click", e => {
@@ -572,6 +580,9 @@ function stored(box, key) {
 }
 function store(box, key, value) {
   try { box.setItem("trove:" + key, JSON.stringify(value)); } catch (err) {}
+}
+function drop(box, key) {
+  try { box.removeItem("trove:" + key); } catch (err) {}
 }
 // Picks live with the tab: a reload keeps the stack, a new tab starts clean.
 function persistPicks() { store(sessionStorage, "picked", [...state.picked]); }
@@ -660,6 +671,126 @@ function liveCost() {
   return state.data.skills.reduce((n, s) => n + (skillMachine(s).enabled ? s.tokensAlwaysOn : 0), 0);
 }
 
+/* ---------- a machine the visitor pastes in ---------- */
+// A published build has no server to ask, so the visitor runs
+// `claude plugin list --json` and hands the page the answer. The reading
+// mirrors installed.py so both paths produce the same payload: an id splits on
+// its last `@` into plugin and marketplace, and only a plugin this registry
+// offers under its own marketplace name counts.
+function importKey() { return "imported:" + (state.data.marketplace || state.data.registry); }
+
+function splitId(entry) {
+  const id = String(entry && entry.id != null ? entry.id : "");
+  const cut = id.lastIndexOf("@");
+  return cut < 0 ? ["", id] : [id.slice(0, cut), id.slice(cut + 1)];
+}
+
+function surveyEntries(entries) {
+  const name = state.data.marketplace || state.data.registry;
+  const offered = new Map(state.data.plugins.map(p => [p.name, p]));
+  const found = {};
+  let configured = false;
+  for (const entry of entries) {
+    const [plugin, market] = splitId(entry);
+    configured = configured || market === name;
+    if (market !== name || !offered.has(plugin)) continue;
+    const record = found[plugin] || (found[plugin] = { enabled: false, version: null, scopes: [], projects: [] });
+    const enabled = Boolean(entry.enabled);
+    // One plugin can be installed at both scopes. The version reported is the
+    // one Claude Code loads, so an enabled entry wins the tie.
+    if (enabled || record.version === null) record.version = entry.version ?? null;
+    record.enabled = record.enabled || enabled;
+    record.scopes.push(entry.scope ?? null);
+    if (entry.projectPath) record.projects.push(entry.projectPath);
+  }
+  for (const [plugin, record] of Object.entries(found)) {
+    record.offered = offered.get(plugin).version ?? null;
+    record.update = Boolean(record.offered && record.version !== record.offered);
+  }
+  const names = Object.keys(found);
+  return {
+    marketplace: name, available: true, configured, imported: true, plugins: found,
+    totals: { plugins: names.length, enabled: names.filter(n => found[n].enabled).length },
+  };
+}
+
+// Another marketplace that ships these plugin names. A paste that reads as
+// "nothing installed" usually means this registry was added under a name the
+// catalog does not know.
+function suggestMarketplace(entries, asked) {
+  const offered = new Set(state.data.plugins.map(p => p.name));
+  const names = new Map();
+  for (const entry of entries) {
+    const [plugin, market] = splitId(entry);
+    if (!market || market === asked || !offered.has(plugin)) continue;
+    if (!names.has(market)) names.set(market, new Set());
+    names.get(market).add(plugin);
+  }
+  let best = null;
+  for (const [market, matched] of names) {
+    if (!best || matched.size > best.matches) best = { marketplace: market, matches: matched.size };
+  }
+  return best;
+}
+
+function readImport(text) {
+  if (!text.trim()) return { error: "Nothing to read yet. Paste the answer to <code>claude plugin list --json</code>." };
+  let entries;
+  try {
+    entries = JSON.parse(text);
+  } catch (err) {
+    return { error: `That is not valid JSON: ${escapeHtml(err.message)}. Copy the whole answer, brackets included.` };
+  }
+  if (!Array.isArray(entries)) {
+    const kind = entries === null ? "null" : typeof entries === "object" ? "an object" : `a ${typeof entries}`;
+    return { error: `<code>claude plugin list --json</code> answers an array of plugins. This JSON is ${kind}.` };
+  }
+  if (!entries.length) return { error: "That array is empty, so this machine has no plugin installed at all." };
+  const machine = surveyEntries(entries);
+  if (machine.totals.plugins) return { machine, entries };
+  const mkt = `<code>${escapeHtml(machine.marketplace)}</code>`;
+  const hint = suggestMarketplace(entries, machine.marketplace);
+  const many = `${entries.length} installed plugin${entries.length === 1 ? "" : "s"}`;
+  return {
+    error: hint
+      ? `None of these ${many} come from ${docLink("marketplace", "glossary.md#marketplace")} ${mkt}, ` +
+        `but <b>${hint.matches}</b> of them carry these plugin names under ` +
+        `<code>${escapeHtml(hint.marketplace)}</code>. Trove joins on the marketplace name, so add this ` +
+        `registry as ${mkt} and install from it, or ask whoever published it which name to use.`
+      : `None of these ${many} come from marketplace ${mkt}, and none carries a plugin name this registry offers.`,
+  };
+}
+
+function acceptImport(text) {
+  const read = readImport(text);
+  state.importText = read.error ? text : "";
+  state.importError = read.error || "";
+  if (!read.error) {
+    store(localStorage, importKey(), read.entries);
+    state.machine = read.machine;
+  }
+  render();
+}
+
+function forgetImport() {
+  drop(localStorage, importKey());
+  state.machine = null;
+  state.importText = state.importError = "";
+  state.panel = "installed";
+  if (state.flag === "installed" || state.flag === "absent") state.flag = null;
+}
+
+function restoreImport() {
+  const entries = stored(localStorage, importKey());
+  if (!Array.isArray(entries) || !entries.length) return null;
+  const machine = surveyEntries(entries);
+  if (machine.totals.plugins) return machine;
+  drop(localStorage, importKey());
+  state.importError = "The answer this browser remembered names no plugin this registry offers any more. " +
+    "Paste a fresh one.";
+  return null;
+}
+
 /* ---------- filtering ---------- */
 function matches(s) {
   if (state.cat && s.category !== state.cat) return false;
@@ -711,6 +842,7 @@ function render() {
     $("t-" + v).setAttribute("aria-current", v === state.view ? "page" : "false");
     $("view-" + v).hidden = v !== state.view;
   }
+  renderTotals();
   renderPanel();
   if (state.view === "docs") {
     $("grid").innerHTML = "";
@@ -727,6 +859,22 @@ function render() {
     else renderList(shown, skills.length);
   }
   renderStack();
+}
+
+// What the registry offers, and what this machine holds of it once an
+// answer arrives. An import lands after boot, so the counts are drawn again
+// on every render.
+function renderTotals() {
+  const d = state.data;
+  const nSources = Object.keys(d.sources).length;
+  $("totals").innerHTML = `<b>${d.totals.skills}</b> skills from <b>${nSources}</b> source${nSources === 1 ? "" : "s"}` +
+    ` · <b>${d.totals.alwaysOn.toLocaleString()}</b> tokens always-on if you install them all.` +
+    (hasInstalls() ? ` <b>${installedSkills().length}</b> of them are installed here, ` +
+      `<b>${enabledSkills().length}</b> enabled at <b>${liveCost().toLocaleString()}</b> tokens today.` : "");
+  $("ptotals").innerHTML = `<b>${d.plugins.length}</b> plugin${d.plugins.length === 1 ? "" : "s"} composed from ` +
+    `<b>${nSources}</b> source${nSources === 1 ? "" : "s"}. Each row carries its install command.` +
+    (hasInstalls() ? ` <b>${state.machine.totals.plugins}</b> installed on this machine, ` +
+      `<b>${state.machine.totals.enabled}</b> of those enabled.` : "");
 }
 
 function renderFacets(skills) {
@@ -774,6 +922,11 @@ function renderFacets(skills) {
       () => { state.flag = state.flag === "absent" ? null : "absent"; });
     rest.title = "Offered by the registry, but no plugin on this machine ships it";
     flags.appendChild(rest);
+    if (state.machine.imported) {
+      const forget = chip("Forget this machine", null, false, forgetImport);
+      forget.title = "Installed state came from JSON you pasted, kept in this browser. Drop it";
+      flags.appendChild(forget);
+    }
   } else {
     const ask = chip("Installed?", null, state.panel === "installed", () => { state.panel = state.panel === "installed" ? "" : "installed"; });
     ask.title = "This page has no install state. Open the steps that give it one";
@@ -794,10 +947,14 @@ function setupSteps() {
   const mkt = escapeHtml(marketplaceName());
   if (!m) {
     return {
-      title: "This page cannot see your machine",
-      note: "Trove reads installed plugins from <code>claude plugin list</code>, and only the " +
-        "local preview server answers for it. A published build never carries install state.",
-      steps: [{ text: "Serve the catalog from the checkout, then reload:", cmd: "just serve", sh: true }],
+      title: "Tell this page what you have installed",
+      note: "Trove reads installed plugins from <code>claude plugin list</code>, and only the local " +
+        "preview server can run it. Run it yourself and hand the page the answer: it joins that " +
+        "against this registry and lights up the installed filter, the badges, and what your " +
+        "install charges every session. The answer names paths inside your home directory, so it " +
+        "is read in this browser and uploaded nowhere.",
+      steps: [{ text: "Run this, then paste or drop the answer below:", cmd: "claude plugin list --json", sh: true }],
+      importer: true,
     };
   }
   if (!m.available) {
@@ -805,7 +962,8 @@ function setupSteps() {
       title: "Trove could not ask what is installed",
       note: `The preview server ran <code>claude plugin list --json</code> and got: ` +
         `${escapeHtml(m.reason || "no answer")}.`,
-      steps: [{ text: "Run it yourself to see the failure:", cmd: "claude plugin list --json", sh: true }],
+      steps: [{ text: "Run it yourself, then paste or drop the answer below:", cmd: "claude plugin list --json", sh: true }],
+      importer: true,
     };
   }
   if (m.suggest) {
@@ -853,12 +1011,41 @@ function renderPanel() {
     <ol>${plan.steps.map(step => `<li>${step.html || escapeHtml(step.text)}` +
       (step.cmd ? `<div class="cmd${step.sh ? " sh" : ""}"><code>${escapeHtml(step.cmd)}</code>` +
         "<button type=\"button\">Copy</button></div>" : "") + "</li>").join("")}</ol>
+    ${plan.importer ? importBox() : ""}
   </section>`;
   slot.querySelector(".close").onclick = () => togglePanel(state.panel);
   for (const cmd of slot.querySelectorAll(".cmd")) {
     const button = cmd.querySelector("button");
     button.onclick = () => copyText(cmd.querySelector("code").textContent, button, "Copy");
   }
+  if (plan.importer) wireImport(slot);
+}
+
+function importBox() {
+  return `<div class="import">
+    <textarea id="paste" spellcheck="false" aria-label="Output of claude plugin list --json"
+      placeholder="Paste the JSON here, or drop the file on this box">${escapeHtml(state.importText)}</textarea>
+    ${state.importError ? `<p class="oops" role="alert">${state.importError}</p>` : ""}
+    <div class="importacts">
+      <button type="button" class="btn primary" id="readpaste">Read it</button>
+      <p>Read in this browser. It reaches no server.</p>
+    </div>
+  </div>`;
+}
+
+function wireImport(slot) {
+  const box = slot.querySelector(".import");
+  const paste = slot.querySelector("#paste");
+  slot.querySelector("#readpaste").onclick = () => acceptImport(paste.value);
+  box.addEventListener("dragover", e => { e.preventDefault(); box.classList.add("dropping"); });
+  box.addEventListener("dragleave", () => box.classList.remove("dropping"));
+  box.addEventListener("drop", e => {
+    e.preventDefault();
+    box.classList.remove("dropping");
+    const file = e.dataTransfer.files[0];
+    if (file) file.text().then(acceptImport);
+    else acceptImport(e.dataTransfer.getData("text"));
+  });
 }
 
 function tile(label, count, pressed, fallback, apply) {
