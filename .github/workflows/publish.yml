@@ -34,6 +34,8 @@ jobs:
           fi
       # Create the Pages project once before the first run:
       #   wrangler pages project create trove --production-branch main
+      # Cloudflare serves the project from trove-da8.pages.dev, not
+      # trove.pages.dev: the bare subdomain was already taken.
       - name: Deploy to Cloudflare Pages
         id: deploy
         uses: cloudflare/wrangler-action@v4

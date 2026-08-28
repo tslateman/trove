@@ -9,6 +9,8 @@ A registry for Claude Code skills. Author skills in whatever repo owns them,
 compose them into bundles, publish a marketplace, and browse the catalog with
 token cost on every row.
 
+Browse the [live catalog](https://trove-da8.pages.dev/).
+
 ![Narrowing the catalog to one category, sorting by always-on cost, expanding the dearest skill, picking three into a stack that prices itself, copying the bundle, copying a plugin's install command, and switching to dark](docs/demo.gif)
 
 New here? Start with the [getting started guide](docs/getting-started.md).
