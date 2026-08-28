@@ -20,10 +20,9 @@ the UI never fills.
       against its own test prompts. The card shows it beside the token cost, so
       a browser weighs one against the other instead of guessing.
 - [ ] **Invocation counts.** How often a skill actually fires in real sessions.
-      An installed skill spends context whether or not it ever triggers, so the
-      count answers the only question that retires one.
+      An installed skill spends context whether or not it ever triggers.
 - [ ] **Rank the catalog on evidence.** Once both signals exist, sort and filter
-      on them. Alphabetical order is a placeholder for having nothing to say.
+      on them.
 
 The blocker is a scoring source. Trove indexes and serves; it does not run
 skills. Either an external runner writes results Trove reads, or Trove grows a
@@ -48,9 +47,9 @@ and reaching sources git does not serve publicly.
       file-get from `catalog.json` plus the `sources` block, which now carries
       each source's url and pinned sha. Git hosts the immutable content, so the
       surface resolves rather than stores and needs no server.
-- [x] **Price the reader.** The reader skill costs 111 tokens always-on. Installing
-      every plugin in the published registry costs 7,853 across 62 skills. Break-even
-      is two skills.
+- [x] **Price the reader.** The reader skill costs 111 tokens always-on.
+      Installing every plugin in the published registry costs 7,641 across 58
+      skills.
 - [x] **Serve the bodies the reader points at.** `sources[].body` names one base
       per source: raw git at the pinned sha for a public GitHub source, and
       `body/<source>/` for everything else, which `trove serve` answers from the
@@ -73,8 +72,7 @@ looks the same as one that rewrites a paragraph.
       invocations, network calls, credential paths, `allowed-tools` breadth —
       and surface a risk signal on the card next to the token cost.
 - [ ] **Policy gating at build.** Let a bundle declare what it refuses to ship,
-      and fail `just build` when a source violates it. Sha-pinning already makes
-      a bundle reproducible; a policy makes it defensible.
+      and fail `just build` when a source violates it.
 - [ ] **Provenance in the catalog.** Show which source and commit a skill came
       from, and flag when a pinned sha moves under a bundle.
 - [ ] **Install audit trail.** Record what a bundle installed, when, and at
@@ -99,7 +97,7 @@ sees two sources shipping the same capability, and nothing reports age.
 - [ ] **Staleness signal.** Surface last-changed date per skill and flag a
       source whose upstream has moved past its pin.
 
-The stack-picker collision under Known gaps was this problem surfacing as a
+The stack-picker collision under Known limits was this problem surfacing as a
 bug; the picker now keys by source, but the redundancy it exposed remains
 unmeasured.
 
@@ -107,17 +105,18 @@ unmeasured.
 
 Documented in the README under Known limits; repeated here as work.
 
-- [ ] Index plugins that ship agents, commands, or hooks. Today they report zero
-      skills.
+- [ ] **Index a plugin that ships no skills.** A plugin carrying agents,
+      commands, or hooks reports zero skills today.
 - [ ] **Submit a skill from the catalog.** Adding a skill today means a terminal:
       `just promote`, a commit, and a push. The page knows the sources and the
       paths, so it could take a `SKILL.md` from a drop or a paste, lint and price
       it before anything is written, and hand back the branch or pull request
       that puts it in the repo that should own it. The open question is what a
       published catalog is allowed to write, and with whose credentials.
-- [x] Catalog a source that has only a remote. Sources are fetched and cached by
-      commit sha, so a bundle indexes the same everywhere, CI included.
-- [x] Count a skill's bundled files. The card and `scan --verbose` now price
+- [x] **Catalog a source that has only a remote.** Sources are fetched and
+      cached by commit sha, so a bundle indexes the same everywhere, CI
+      included.
+- [x] **Count a skill's bundled files.** The card and `scan --verbose` now price
       the files beside `SKILL.md`; a binary counts as a file and adds nothing.
-- [x] Key the stack picker by source and path. Two sources shipping the same
+- [x] **Key the stack picker by source and path.** Two sources shipping the same
       skill name pick independently, and the UI check proves it with twins.

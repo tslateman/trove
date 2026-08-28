@@ -4,10 +4,8 @@ status: draft
 
 # Share a skill
 
-A skill under `~/.claude/skills/<name>/` works on one machine. Nothing indexes
-it, and Claude Code has no command that pushes it anywhere. Sharing it means
+A skill under `~/.claude/skills/<name>/` works on one machine. Sharing it means
 moving it into a repo the team can read and letting Trove publish that repo.
-This page is the copy-and-paste path from one to the other.
 
 The catalog prints the same path: **Add a skill** in the header names the
 repos this registry reads and the commands for each step below.

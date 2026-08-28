@@ -7,8 +7,7 @@ label: Landscape
 
 Four registries, four answers to how a skill reaches a session. This page
 records what each one does and what each one measures, as surveyed on
-2026-08-27. The other three move faster than this page. Trove's own mechanics
-are in the [README](../README.md).
+2026-08-27. Trove's own mechanics are in the [README](../README.md).
 
 ## The registries this compares against
 
@@ -59,9 +58,9 @@ Measured with `trove`'s own estimator:
 
 | Subject                                       | Always-on | On invoke |
 | --------------------------------------------- | --------- | --------- |
-| Trove reader, `skills/trove`                  | 111       | 1,107     |
+| Trove reader, `skills/trove`                  | 111       | 1,451     |
 | PostHog bridge, `skills-store`                | 82        | 3,819     |
-| Every skill in the published registry, all 62 | 7,853     | —         |
+| Every skill in the published registry, all 58 | 7,641     | —         |
 
 Both front a whole registry for the price of one skill. PostHog's runs
 against a database and puts the store's uptime in the path of every session that

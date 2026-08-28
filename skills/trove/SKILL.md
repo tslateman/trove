@@ -81,7 +81,7 @@ catalog | jq -r '.totals | "\(.skills) skills, \(.alwaysOn) tok always-on"'
 The `tokensAlwaysOn` field is what a skill charges every session whether or not
 it fires. `tokensOnInvoke` is what its body charges when it does. Claude Code
 caps skill metadata at `skillListingBudgetFraction` of the context window, 1% by
-default, so an always-on total is a budget, not a curiosity.
+default.
 
 ## Level 2 — get one body
 

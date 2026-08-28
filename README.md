@@ -147,8 +147,7 @@ claude plugin install review-kit@mine
 Picking skills fills the tray at the bottom of the page with a plugin block,
 and copying it is the first of three steps the tray spells out: paste the block
 under `plugins:` in your bundle, run `just dist`, then install the plugin the
-build now carries. The tray hands over that command line too, so the path from
-a picked row to a working install is copy, paste, copy, run.
+build now carries. The tray hands over that command line too.
 
 The header carries the other direction. **Add a skill** names the repos this
 registry reads and prints the commands that put a personal skill into one of
@@ -335,8 +334,8 @@ silently. Under `--offline` it stays a hard error.
 `skills/trove` is a reader: install that one skill and a session can list every
 skill in the catalog, read one body, and pull one bundled file, paying for what
 it opens instead of for what exists. It costs 111 tokens always-on against the
-7,853 that installing every plugin in the registry this repo publishes costs
-across its 62 skills.
+7,641 that installing every plugin in the registry this repo publishes costs
+across its 58 skills.
 
 `catalog.json` carries a `sources` block, and each source names a `body` base a
 skill's files resolve from, joined with `<skill path>/<file>`:
@@ -367,9 +366,6 @@ answers from the checkout on disk. That covers a source before it is pushed, one
 with no pin, and one behind a host that serves no raw URL. Reading through
 `body/` puts the server in the path, which is why a published source never
 routes that way.
-
-The skill states its disclosure contract outright: descriptions to choose, one
-body once chosen, one file when the body names it.
 
 ## What the scanner refuses to count
 

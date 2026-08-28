@@ -143,7 +143,7 @@ review-kit                      0.1.0      0.1.0  installed, disabled
 trove                           0.1.0          —  not installed
 
 2 of 3 plugins installed, 1 enabled
-~5,140 tok always-on from the 44 skills enabled here, of ~7,853 offered
+~5,140 tok always-on from the 44 skills enabled here, of ~7,641 offered
 ```
 
 The reading comes from `claude plugin list --json` and
