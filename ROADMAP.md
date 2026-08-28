@@ -42,8 +42,8 @@ and reaching sources git does not serve publicly.
       main and deploys it to Cloudflare Pages. It reads `bundles/registry.yaml`
       when the repo carries one and falls back to the demo bundle, so the
       pipeline runs before a public bundle exists. GitHub Pages was the first
-      target and never deployed: a free plan hosts it only from a public repo,
-      and trove is private.
+      target and never deployed: a free plan hosts it only from a public repo.
+      Cloudflare Pages takes the build by direct upload instead.
 - [x] **Read surface over the index.** `skills/trove` answers list, get, and
       file-get from `catalog.json` plus the `sources` block, which now carries
       each source's url and pinned sha. Git hosts the immutable content, so the
