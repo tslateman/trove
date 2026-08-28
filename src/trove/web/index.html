@@ -1418,9 +1418,17 @@ function mdToHtml(src) {
       flush();
       const ordered = /^\s*\d+\./.test(line);
       const items = [];
+      // A wrapped item keeps reading until the next marker or a blank line, so
+      // a bullet written across three lines renders as one.
+      const opensBlock = line => /^```/.test(line) || /^#{1,6}\s/.test(line) || /^\s*\|/.test(line);
       while (i < lines.length && /^\s*([-*]|\d+\.)\s+/.test(lines[i])) {
         items.push(lines[i].replace(/^\s*([-*]|\d+\.)\s+/, ""));
         i++;
+        while (i < lines.length && lines[i].trim() &&
+               !/^\s*([-*]|\d+\.)\s+/.test(lines[i]) && !opensBlock(lines[i])) {
+          items[items.length - 1] += " " + lines[i].trim();
+          i++;
+        }
       }
       i--;
       const tag = ordered ? "ol" : "ul";
