@@ -161,26 +161,31 @@ The sha is what makes an install reproducible. A teammate who installs today and
 one who installs next month get the same bytes until you rebuild.
 
 `just dist` runs `build` and `catalog` together and leaves `out/` ready to
-publish. Serve that directory from anywhere: GitHub Pages, an object store, or
-a static host.
+publish. Serve that directory from anywhere: an object store, a static host, or
+GitHub Pages.
 
 This repo ships the deploy step as
 [`.github/workflows/publish.yml`](../.github/workflows/publish.yml): every push
-to main rebuilds `out/` and deploys it to GitHub Pages, reading
+to main rebuilds `out/` and deploys it to Cloudflare Pages, reading
 `bundles/registry.yaml` when one is committed and falling back to the demo
-bundle until then. To reuse it, copy the workflow, point it at your bundle, and
-enable Pages under Settings → Pages → Source: GitHub Actions.
+bundle until then. To reuse it, copy the workflow, point it at your bundle,
+create the project once with `wrangler pages project create <name>
+--production-branch main`, and set `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` as repository secrets.
+
+GitHub Pages serves the same directory and needs no secrets, but a free plan
+hosts it only from a public repo.
 
 ## Step 5: Install
 
 ```bash
-claude plugin marketplace add your-org/your-registry   # or the Pages URL, or a local path
+claude plugin marketplace add your-org/your-registry   # or the published URL, or a local path
 claude plugin install skills@mine
 ```
 
 `marketplace add` takes a GitHub repo as `owner/name`, a URL, or a directory
-holding `.claude-plugin/marketplace.json`, so a Pages deploy and a local `out/`
-both work.
+holding `.claude-plugin/marketplace.json`, so a deployed catalog and a local
+`out/` both work.
 
 Claude Code files the registry under the name inside that manifest, which is
 your bundle's `name:`. When teammates added it under a different name, say so
