@@ -15,6 +15,7 @@ from .build import build_marketplace, dumps
 from .catalog import build_catalog
 from . import installed, local
 from .fetch import Workspace, default_cache
+from .frontmatter import split as split_frontmatter
 from .lint import FINDINGS
 from .loader import load_bundle
 from .promote import promote
@@ -80,6 +81,72 @@ def cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
+DOC_ROOT = Path("docs")
+# Reading order for the guides Trove ships: orientation, then the task pages,
+# then what you look up. A registry's own pages sit between the two groups.
+DOC_FIRST = (
+    "README.md",
+    "getting-started.md",
+    "cli.md",
+    "troubleshooting.md",
+    "sharing-a-skill.md",
+)
+DOC_LAST = ("glossary.md", "landscape.md", "ROADMAP.md")
+# Pages that live at the repo root rather than in docs/.
+ROOT_PAGES = ("README.md", "ROADMAP.md")
+
+
+def doc_order(path: Path) -> tuple[int, int, str]:
+    if path.name in DOC_FIRST:
+        return 0, DOC_FIRST.index(path.name), path.name
+    if path.name in DOC_LAST:
+        return 2, DOC_LAST.index(path.name), path.name
+    return 1, 0, path.name
+
+
+# A page is an AI draft until a human writes `status: verified` into it.
+DRAFT = "draft"
+
+
+def doc_entry(path: Path) -> dict:
+    """A page's own heading and review status, read from the page itself."""
+    meta, body = split_frontmatter(path.read_text(encoding="utf-8"))
+    title = next(
+        (line[2:].strip() for line in body.splitlines() if line.startswith("# ")),
+        path.stem.replace("-", " ").capitalize(),
+    )
+    return {
+        "file": path.name,
+        "title": title,
+        # `label:` names the page in the rail when its own heading is the wrong
+        # length for a nav item, as a repo README's heading usually is.
+        "label": meta.get("label", title),
+        "status": meta.get("status", DRAFT),
+    }
+
+
+def ship_docs(out: Path, root: Path) -> list[dict]:
+    """Copy the registry's guides beside the catalog so the page can read them.
+
+    A build with no `docs/` beside it ships none, and the Docs tab then carries
+    only what the page itself knows.
+    """
+    source = root / DOC_ROOT
+    if not source.is_dir():
+        return []
+    target = out / DOC_ROOT
+    shutil.copytree(source, target, dirs_exist_ok=True)
+    for name in ROOT_PAGES:
+        page = root / name
+        if page.is_file():
+            shutil.copy2(page, target / name)
+    pages = [doc_entry(path) for path in sorted(target.glob("*.md"), key=doc_order)]
+    (target / "index.json").write_text(
+        json.dumps(pages, indent=2) + "\n", encoding="utf-8"
+    )
+    return pages
+
+
 def cmd_catalog(args: argparse.Namespace) -> int:
     bundle = load_bundle(args.bundle)
     workspace = workspace_for(args)
@@ -89,9 +156,11 @@ def cmd_catalog(args: argparse.Namespace) -> int:
     target = args.out / "catalog.json"
     target.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
     shutil.copytree(Path(__file__).parent / "web", args.out, dirs_exist_ok=True)
+    pages = ship_docs(args.out, Path.cwd())
     print(
         f"wrote {target}: {catalog['totals']['skills']} skills, "
         f"~{catalog['totals']['alwaysOn']:,} tok always-on"
+        + (f", {len(pages)} doc page(s)" if pages else "")
     )
     return 0
 
@@ -113,6 +182,7 @@ def cmd_lint(args: argparse.Namespace) -> int:
                 print(f"  {code}: {FINDINGS[code]}")
     if flagged:
         print(f"\n{flagged} skill(s) flagged")
+        print("each finding and its fix: docs/troubleshooting.md", file=sys.stderr)
         return 1
     print("no findings: every skill names itself and says when it fires")
     return 0

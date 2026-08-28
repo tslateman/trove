@@ -1,3 +1,7 @@
+---
+status: draft
+---
+
 # Getting started
 
 Trove turns one bundle file into a Claude Code marketplace, and prices every
@@ -39,7 +43,14 @@ ever fire.
 ## Step 1: Describe your registry
 
 A bundle names the repos you draw from and the plugins you compose out of them.
-Twelve lines is enough:
+Start from the commented starter, which every recipe reads by default and
+`.gitignore` keeps out of the repo, so your registry stays yours:
+
+```bash
+cp bundles/example.yaml bundles/local.yaml
+```
+
+Then cut it down to the repos you have. Twelve lines is enough:
 
 ```yaml
 # bundles/local.yaml
@@ -64,15 +75,9 @@ no `skills:` list ships everything its source holds.
 You do not need a checkout. Trove fetches a source it has not seen, so the same
 bundle builds on your laptop and in CI. See [Fetching](../README.md#fetching).
 
-Write it to `bundles/local.yaml`. Every recipe reads that path by default, and
-`.gitignore` keeps it out of the repo, so your registry stays yours:
-
-```bash
-cp bundles/example.yaml bundles/local.yaml
-```
-
-`example.yaml` is a commented starter covering whole-repo sources, monorepo
-subdirectories, cherry-picked subsets, and renames.
+`example.yaml` covers the rest of the shapes: monorepo subdirectories,
+cherry-picked subsets, renames, and the optional `marketplace:` key that
+[Step 5](#step-5-install) explains.
 
 ## Step 2: Price the skills
 
@@ -125,7 +130,10 @@ Shipped twice filter shows the names both ship; see [Twins](../README.md#twins).
 The Show row also carries an Installed filter once a plugin from this registry
 is installed on the machine. Until then it carries a question mark, and opening
 it prints the commands that give the page an answer; see
-[Installed, not just offered](../README.md#installed-not-just-offered).
+[What this machine has installed](../README.md#what-this-machine-has-installed).
+
+The **Docs** tab carries the guides this repo ships, including the
+[glossary](glossary.md), so the vocabulary is one click from the catalog.
 
 Press `just stop` when you are done.
 
@@ -166,9 +174,18 @@ enable Pages under Settings → Pages → Source: GitHub Actions.
 ## Step 5: Install
 
 ```bash
-claude plugin marketplace add https://your-registry.example.com
+claude plugin marketplace add your-org/your-registry   # or the Pages URL, or a local path
 claude plugin install skills@mine
 ```
+
+`marketplace add` takes a GitHub repo as `owner/name`, a URL, or a directory
+holding `.claude-plugin/marketplace.json`, so a Pages deploy and a local `out/`
+both work.
+
+Claude Code files the registry under the name inside that manifest, which is
+your bundle's `name:`. When teammates added it under a different name, say so
+with `marketplace:` in the bundle, or the catalog reports nothing installed. The
+catalog's Show row says which name it is joining on.
 
 `claude plugin details skills@mine` reports what Claude Code thinks the plugin
 costs. Compare it against Trove's estimate with
@@ -214,4 +231,5 @@ just sync-local-check  # what Claude Code's local marketplace has drifted to
 - [CLI reference](cli.md) for every command and flag
 - [Troubleshooting](troubleshooting.md) for what the errors mean
 - [The bundle](../README.md#the-bundle) for the full file format
-- [ROADMAP](../ROADMAP.md) for what Trove does not do yet
+- [Landscape](landscape.md) for how Trove compares to the alternatives
+- [Roadmap](../ROADMAP.md) for what Trove does not do yet

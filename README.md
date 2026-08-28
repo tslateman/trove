@@ -1,3 +1,8 @@
+---
+status: draft
+label: Overview
+---
+
 # Trove
 
 A registry for Claude Code skills. Author skills in whatever repo owns them,
@@ -35,7 +40,7 @@ uv run --with playwright playwright install chromium
 
 `just fmt` shells out to `prettier`, which is not managed by this project.
 
-## Use
+## Recipes
 
 ```bash
 just scan          # index skills, report token cost per source
@@ -135,6 +140,18 @@ claude plugin marketplace add <your-registry>
 claude plugin install review-kit@mine
 ```
 
+## The stack tray
+
+Picking skills fills the tray at the bottom of the page with a plugin block,
+and copying it is the first of three steps the tray spells out: paste the block
+under `plugins:` in your bundle, run `just dist`, then install the plugin the
+build now carries. The tray hands over that command line too, so the path from
+a picked row to a working install is copy, paste, copy, run.
+
+The header carries the other direction. **Add a skill** names the repos this
+registry reads and prints the commands that put a personal skill into one of
+them, which is [the sharing guide](docs/sharing-a-skill.md) in short form.
+
 ## Mixing sources
 
 `sources` is a map, so a bundle names as many repos as it wants and the
@@ -144,7 +161,7 @@ a plugin block per source, each scoped to only the skills you picked from it.
 
 ![Filtering to a plugin from one repo, picking a skill, filtering to a plugin from another repo, picking a second skill: the composed bundle splits into a block per source](docs/demo-mixing.gif)
 
-## Installed, not just offered
+## What this machine has installed
 
 The catalog is what a registry offers. What a machine has is a different
 question, and Claude Code already answers it: `claude plugin list --json`
@@ -207,6 +224,23 @@ Code's docs: [plugins](https://code.claude.com/docs/en/plugins),
 [marketplaces](https://code.claude.com/docs/en/plugin-marketplaces), and
 [skills](https://code.claude.com/docs/en/skills). Retire a twin by deleting one
 side; the catalog drops it on the next build.
+
+## Reading the docs in the catalog
+
+`trove catalog` copies this repo's `docs/` and `README.md` into the build, so
+the site carries its own manual under a **Docs** tab: the glossary first, then
+every guide, rendered from the same markdown GitHub shows. Terms in the
+interface link into it. The legend above the list defines `always-on` there,
+and the stack tray links the word `bundle` to the paragraph that says what one
+is.
+
+A build with no `docs/` beside it ships no pages and hides the tab, so a
+registry that keeps its guides elsewhere loses nothing.
+
+Every page carries its review status in the corner, read from `status:` in its
+own frontmatter. A page is an **AI draft** until a human reads it and writes
+`status: verified` into it, so a reader can tell a checked page from an
+unchecked one before trusting it.
 
 ## Browsing the atlas
 
@@ -396,10 +430,13 @@ Planned work on each lives in [ROADMAP.md](ROADMAP.md).
 ```bash
 just test      # unit tests
 just verify    # drive the built catalog headless, assert it renders
-just check     # formatting, tests, and the UI check
+just check     # everything CI runs
 just shots     # catalog screenshots in both themes
 just demo      # record an mp4 walkthrough of the catalog
 ```
+
+Each recipe and what it wraps is in the
+[CLI reference](docs/cli.md#development-recipes).
 
 `just verify` serves the site and drives it in headless Chromium. It fails if
 the row count drifts from the catalog, a console error fires, the stack count
@@ -439,8 +476,10 @@ packaged (`.github/workflows/check.yml`).
 | [Getting started](docs/getting-started.md) | Empty directory to published registry       |
 | [CLI reference](docs/cli.md)               | Every command, flag, and recipe             |
 | [Troubleshooting](docs/troubleshooting.md) | What each error means and how to clear it   |
+| [Share a skill](docs/sharing-a-skill.md)   | A personal skill into the repo that owns it |
+| [Glossary](docs/glossary.md)               | The vocabulary this catalog uses            |
 | [Landscape](docs/landscape.md)             | Trove against PostHog, Tessl, and skills.sh |
-| [ROADMAP](ROADMAP.md)                      | What Trove does not do yet                  |
+| [Roadmap](ROADMAP.md)                      | What is shipped, and what is not            |
 
 ## License
 
