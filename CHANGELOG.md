@@ -4,9 +4,7 @@ Notable changes to Trove. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version
 numbers follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-## [0.1.0] - 2026-08-28
+## 0.1.0 - 2026-08-28
 
 First public release. Trove reads skills from the repos that own them, prices
 each one in tokens, and publishes a catalog and a Claude Code marketplace from
