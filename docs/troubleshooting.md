@@ -1,3 +1,7 @@
+---
+status: draft
+---
+
 # Troubleshooting
 
 Every message below is verbatim. Each one names a bundle mistake rather than a
@@ -169,8 +173,11 @@ description: Reflect on recent work and surface what comes next.
 
 ### Two sources ship the same skill name
 
-The stack picker keys selections by skill name, so the entries collapse into
-one. This is a known gap tracked in the [ROADMAP](../ROADMAP.md).
+Nothing is wrong: both rows are real, and both load in a session under their own
+plugin namespace. The picker keys a selection by source and path, so picking one
+does not pick the other, and the Shipped twice filter narrows the catalog to
+every name in that position. What a twin costs you is its always-on price,
+twice. [Twins](../README.md#twins) says how to read one and how to retire it.
 
 ### An estimate disagrees with Claude Code
 
@@ -184,8 +191,9 @@ The constants were fitted by least squares over 55 skills, with a mean absolute
 error of 2.4% on always-on and 1.0% on invoke. A larger error means Claude Code
 changed how it counts. The constants live in `src/trove/models.py`.
 
-Note that the on-invoke number covers `SKILL.md` only. A skill carrying
-`references/` and `scripts/` costs more than the catalog shows.
+The on-invoke number covers `SKILL.md` alone. Files beside it are priced in the
+Bundled column, which is a ceiling rather than a bill: each one is read only if
+the body sends the session there.
 
 ## Commands fail to run
 

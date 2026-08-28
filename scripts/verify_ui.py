@@ -37,7 +37,8 @@ XSS_PROBE = """() => {
     path: 'probe', source: 'probe', tokensAlwaysOn: 1, tokensOnInvoke: 1,
     bundledFiles: 1, tokensBundledMax: 1, categoryIsFallback: false, lint: [probe], plugins: [probe]});
   render();
-  const injected = document.querySelectorAll('main img, #stack img').length;
+  const injected = document.querySelectorAll(
+    '#view-skills img, #view-plugins img, #view-atlas img, #stack img').length;
   state.data.skills.pop();
   render();
   return injected;
@@ -120,6 +121,48 @@ def check_installed(page, theme: str) -> list[str]:
     return problems
 
 
+def check_docs(page, theme: str) -> list[str]:
+    """The guides ship beside the catalog, so a term in the interface can link
+    to the paragraph that defines it. A build without them hides the tab."""
+    problems: list[str] = []
+    if page.locator("#t-docs").is_hidden():
+        if page.locator("#legend a[data-doc]").count():
+            problems.append(f"[{theme}] the legend links to docs this build does not carry")
+        return problems
+
+    page.locator("#legend a[data-doc]").first.click()
+    page.wait_for_selector("#docbody h1", timeout=5000)
+    if "view=docs" not in page.url or "page=" not in page.url:
+        problems.append(f"[{theme}] following a glossary link did not reach a doc URL: {page.url}")
+    if page.locator("#doclist a").count() < 2:
+        problems.append(f"[{theme}] the docs rail lists fewer pages than the build ships")
+    anchor = page.url.split("#")[-1]
+    if not page.locator(f"#docbody #{anchor}").count():
+        problems.append(f"[{theme}] the glossary has no section for the term linked to ({anchor})")
+
+    for page_link in page.locator("#doclist a").all():
+        name = page_link.inner_text()
+        page_link.click()
+        page.wait_for_timeout(120)
+        if not page.locator("#docbody h1").count():
+            problems.append(
+                f"[{theme}] {name!r} rendered no heading; the markdown never arrived"
+            )
+        if page.locator(".docstatus").count() != 1:
+            problems.append(f"[{theme}] {name!r} carries no review status")
+        raw = [
+            line for line in page.locator("#docbody").inner_text().split("\n")
+            if "](" in line or line.strip().startswith("status:")
+        ]
+        if raw:
+            problems.append(f"[{theme}] {name!r} shows unrendered markdown: {raw[0][:60]!r}")
+    if page.locator("#docbody p, #docbody li, #docbody pre").count() == 0:
+        problems.append(f"[{theme}] a doc page rendered a heading and nothing else")
+    page.click("#t-skills")
+    page.wait_for_timeout(150)
+    return problems
+
+
 def check(
     page, url: str, expected_skills: int, shots: Path | None, theme: str
 ) -> tuple[list[str], str]:
@@ -163,10 +206,27 @@ def check(
     if picked not in snippet:
         problems.append(f"[{theme}] bundle snippet omits the picked skill {picked!r}")
 
+    following = page.locator("#next .install code").inner_text()
+    for fragment in ("just dist", "claude plugin install"):
+        if fragment not in following:
+            problems.append(
+                f"[{theme}] the tray copies a bundle without saying to run {fragment!r}: {following!r}"
+            )
+
     page.click("#clear")
     page.wait_for_timeout(200)
     if page.locator(".stack:not(.hidden)").count():
         problems.append(f"[{theme}] the stack tray stayed open after Clear")
+
+    if page.locator("#add").is_visible():
+        page.click("#add")
+        page.wait_for_selector("#docbody h1", timeout=5000)
+        if "page=sharing-a-skill.md" not in page.url:
+            problems.append(
+                f"[{theme}] Add a skill did not open the page that says how: {page.url}"
+            )
+        page.click("#t-skills")
+        page.wait_for_timeout(150)
 
     page.locator(".row .more").first.click()
     page.wait_for_timeout(100)
@@ -201,6 +261,8 @@ def check(
     page.wait_for_timeout(100)
 
     problems += check_installed(page, theme)
+
+    problems += check_docs(page, theme)
 
     page.click("#t-atlas")
     page.wait_for_selector("#mapbox svg", timeout=5000)

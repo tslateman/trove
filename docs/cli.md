@@ -1,3 +1,7 @@
+---
+status: draft
+---
+
 # CLI reference
 
 ```
@@ -5,7 +9,8 @@ trove [--bundle BUNDLE] [--out OUT] [--cache CACHE] [--offline] <command>
 ```
 
 Every `just` recipe wraps one of these. `just --list` shows the recipes; this
-page documents what they call.
+page documents what they call. Every command reads a bundle, and
+[getting started](getting-started.md) writes the first one.
 
 ## Global options
 
@@ -83,6 +88,11 @@ set.
 
 Recipes: `just catalog`, `just catalog-offline`, `just dist`, `just orphans`,
 `just twins`.
+
+It also copies `docs/` and `README.md` from the working directory into
+`<out>/docs`, and writes `docs/index.json` naming each page in reading order.
+That is what fills the catalog's Docs tab. A working directory with no `docs/`
+ships none, and the tab hides itself.
 
 ## serve
 

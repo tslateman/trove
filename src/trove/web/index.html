@@ -40,7 +40,7 @@ body {
   background: var(--bg) radial-gradient(var(--grid-dot) 1px, transparent 1px) 0 0 / 22px 22px;
   -webkit-font-smoothing: antialiased;
 }
-body.has-stack { padding-bottom: 210px; }
+body.has-stack { padding-bottom: 240px; }
 a { color: inherit; }
 button { font: inherit; color: inherit; }
 button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -78,7 +78,7 @@ header.site {
 .iconbtn:hover { color: var(--ink); border-color: var(--accent); }
 
 /* ---------- page head ---------- */
-main { padding-top: 26px; padding-bottom: 60px; }
+main.wrap { padding-top: 40px; padding-bottom: 60px; }
 .crumbs { display: flex; gap: 8px; align-items: center; font: 12.5px/1 var(--mono); color: var(--muted); margin-bottom: 14px; }
 .crumbs a { text-decoration: none; }
 .crumbs a:hover { color: var(--accent); }
@@ -121,11 +121,21 @@ main { padding-top: 26px; padding-bottom: 60px; }
 .showing button { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0 0 0 8px; font: inherit; }
 .legend { margin: 0 0 12px; font-size: 12.5px; color: var(--muted); }
 .legend b { color: var(--ok); font-weight: 600; }
+.gloss { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+.gloss:hover { color: var(--accent); text-decoration-style: solid; }
+a.plain { text-decoration: none; }
+a.plain:hover .pill { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- install-state setup ---------- */
 .setup { border: 1px solid var(--accent); border-radius: 12px; background: var(--panel);
   box-shadow: var(--shadow); padding: 15px 18px 17px; margin: 0 0 16px; }
+.setup { position: relative; }
 .setup h3 { margin: 0 0 5px; font-size: 15px; }
+.setup .close { position: absolute; top: 10px; right: 12px; border: 0; background: none; color: var(--muted);
+  font-size: 17px; line-height: 1; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+.setup .close:hover { color: var(--accent); background: var(--accent-soft); }
+.setup .srclist { margin: 8px 0 0; padding-left: 19px; display: grid; gap: 3px; font-size: 13px; }
+.setup .srclist code { color: var(--ink); }
 .setup > p { margin: 0 0 12px; color: var(--muted); font-size: 13.5px; max-width: 76ch; }
 .setup code { font: 12.5px/1 var(--mono); color: var(--ink); }
 .setup > p code { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 2px 5px; }
@@ -222,6 +232,43 @@ main { padding-top: 26px; padding-bottom: 60px; }
 .install button { border: 0; border-left: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 0 10px; cursor: pointer; font: 12px/1 var(--mono); }
 .install button:hover { color: var(--accent); }
 
+/* ---------- docs ---------- */
+.docwrap { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: 20px; align-items: start; }
+.docrail { position: sticky; top: 74px; display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--panel); box-shadow: var(--shadow); padding: 8px; }
+.docrail a { display: block; padding: 7px 10px; border-radius: 8px; text-decoration: none; color: var(--muted); font-size: 13.5px; }
+.docrail a:hover { color: var(--ink); background: var(--bg); }
+.docrail a[aria-current=page] { color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+.docbody { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow);
+  padding: 26px 32px 34px; min-width: 0; font-size: 14.5px; line-height: 1.65; }
+.docbody :is(h1, h2, h3, h4) { scroll-margin-top: 80px; }
+.docbody h1 { margin: 0 0 14px; font-size: 27px; letter-spacing: -.02em; }
+.docbody h2 { margin: 30px 0 10px; font-size: 19px; padding-top: 14px; border-top: 1px solid var(--line); }
+.docbody h3 { margin: 22px 0 6px; font: 600 15px/1.3 var(--mono); color: var(--accent); }
+.docbody h4 { margin: 18px 0 6px; font-size: 14px; }
+.docbody p, .docbody li { color: var(--muted); }
+.docbody a { color: var(--accent); text-underline-offset: 3px; }
+.docbody code { font: 12.5px/1.5 var(--mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 5px; padding: 1px 3px; }
+.docbody pre { margin: 12px 0; overflow-x: auto; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 9px; padding: 12px 14px; }
+.docbody pre code { border: 0; background: none; padding: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink); }
+.docbody img { max-width: 100%; border: 1px solid var(--line); border-radius: 9px; margin: 10px 0; }
+.docbody ul, .docbody ol { padding-left: 22px; display: grid; gap: 5px; }
+.docbody blockquote { margin: 12px 0; padding: 2px 14px; border-left: 3px solid var(--line); color: var(--muted); }
+.docbody hr { border: 0; border-top: 1px solid var(--line); margin: 22px 0; }
+.docbody .tablewrap { overflow-x: auto; margin: 12px 0; }
+.docbody table { border-collapse: collapse; font-size: 13.5px; }
+.docbody th, .docbody td { border: 1px solid var(--line); padding: 7px 11px; text-align: left; vertical-align: top; }
+.docbody th { background: var(--bg); font-weight: 600; white-space: nowrap; }
+.docbody td code { white-space: nowrap; }
+.docnote { color: var(--muted); }
+.docstatus { float: right; margin: 2px 0 8px 16px; font: 11px/1 var(--mono); text-transform: uppercase;
+  letter-spacing: .09em; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.docstatus.verified { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
+.docstatus::before { content: "○ "; }
+.docstatus.verified::before { content: "✓ "; }
+
 /* ---------- stack tray ---------- */
 .stack {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
@@ -230,6 +277,11 @@ main { padding-top: 26px; padding-bottom: 60px; }
 }
 .stack.hidden { display: none; }
 .stack .wrap { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; gap: 16px; align-items: start; padding-top: 14px; padding-bottom: 14px; }
+.stack .pane { min-width: 0; }
+.stack .next { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stack .next > span:first-child { white-space: nowrap; }
+.stack .next > span:first-child code { font: 12px/1.5 var(--mono); color: var(--ink); }
+.stack .next .install { flex: 1 1 320px; min-width: 0; }
 .stack .sum b { display: block; font-size: 14px; }
 .stack .sum span { font: 12.5px/1.5 var(--mono); color: var(--muted); }
 .stack .sum span em { font-style: normal; color: var(--ok); font-weight: 600; }
@@ -278,12 +330,18 @@ main { padding-top: 26px; padding-bottom: 60px; }
 .cw.active { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
 
 /* ---------- responsive ---------- */
-@media (max-width: 900px) { .duo { grid-template-columns: 1fr; } }
+@media (max-width: 900px) {
+  .duo { grid-template-columns: 1fr; }
+  .docwrap { grid-template-columns: 1fr; }
+  .docrail { position: static; grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; }
+  .docbody { padding: 20px 18px 26px; }
+}
 @media (max-width: 760px) {
   .wrap { padding: 0 16px; }
   .bar { gap: 8px 12px; }
   .brand { order: 0; }
-  #theme { order: 1; margin-left: auto; }
+  #add { order: 1; margin-left: auto; }
+  #theme { order: 2; }
   .search { order: 2; flex-basis: 100%; max-width: none; margin-left: 0; }
   .nav { order: 3; width: 100%; }
   .pagehead h1 { font-size: 26px; }
@@ -304,7 +362,7 @@ main { padding-top: 26px; padding-bottom: 60px; }
   .stack pre { max-height: 72px; }
   .stack .acts { flex-direction: row; flex-wrap: wrap; min-width: 0; }
   .stack .acts .btn { flex: 1 1 auto; white-space: nowrap; font-size: 12.5px; padding: 6px 10px; }
-  body.has-stack { padding-bottom: 260px; }
+  body.has-stack { padding-bottom: 300px; }
 }
 @media (min-width: 761px) { .row .costs { display: contents; } }
 @media (prefers-reduced-motion: reduce) { .leaf, .cw, .tile, .more svg, .row { transition: none; } }
@@ -318,12 +376,14 @@ main { padding-top: 26px; padding-bottom: 60px; }
       <a id="t-skills" href="./" aria-current="page">Skills</a>
       <a id="t-plugins" href="./?view=plugins" aria-current="false">Plugins</a>
       <a id="t-atlas" href="./?view=atlas" aria-current="false">Atlas</a>
+      <a id="t-docs" href="./?view=docs" aria-current="false" hidden>Docs</a>
     </nav>
     <div class="search">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" placeholder="Search skills, descriptions, tags" autocomplete="off" aria-label="Search">
       <span class="kbd">/</span>
     </div>
+    <button class="iconbtn" id="add" title="How a skill gets into this registry">+ Add a skill</button>
     <button class="iconbtn" id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
   </div>
 </header>
@@ -334,6 +394,7 @@ main { padding-top: 26px; padding-bottom: 60px; }
     <div class="pagehead">
       <div>
         <h1>Skills</h1>
+        <p class="lede" id="tagline"></p>
         <p class="lede" id="totals"></p>
       </div>
     </div>
@@ -344,8 +405,7 @@ main { padding-top: 26px; padding-bottom: 60px; }
       <span class="showing" id="showing"></span>
     </div>
     <div id="slot-skills"></div>
-    <p class="legend" id="legend">Only <b>always-on</b> is charged every session. A body loads
-      when the skill fires, and a bundled file only if the body sends it there.</p>
+    <p class="legend" id="legend"></p>
     <div class="list">
       <div class="listhead cols" role="row" id="listhead">
         <span></span><span>#</span>
@@ -384,6 +444,7 @@ main { padding-top: 26px; padding-bottom: 60px; }
         <p class="lede" id="atotals"></p>
       </div>
     </div>
+    <div id="slot-atlas"></div>
     <p class="atlasnote">Drag to pan, scroll to zoom, click a branch to fold it, click a skill to
       pick it. Search, filters, and picks stay in sync with Skills.</p>
     <div class="duo" id="atlas">
@@ -391,12 +452,22 @@ main { padding-top: 26px; padding-bottom: 60px; }
       <div class="cloudbox" id="cloudbox"></div>
     </div>
   </section>
+  <section id="view-docs" hidden>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="./" id="crumb-reg-d"></a><span>/</span><b>Docs</b><span>/</span><b id="crumb-doc"></b></nav>
+    <div class="docwrap">
+      <nav class="docrail" id="doclist" aria-label="Pages"></nav>
+      <article class="docbody" id="docbody"></article>
+    </div>
+  </section>
 </main>
 
 <div class="stack hidden" id="stack" aria-live="polite">
   <div class="wrap">
     <div class="sum"><b>Your stack</b><span id="stackcount"></span></div>
-    <pre id="snippet"></pre>
+    <div class="pane">
+      <pre id="snippet"></pre>
+      <p class="next" id="next"></p>
+    </div>
     <div class="acts">
       <button id="copy" class="btn primary">Copy bundle</button>
       <button id="showpicked" class="btn" aria-pressed="false">Show picked only</button>
@@ -406,12 +477,12 @@ main { padding-top: 26px; padding-bottom: 60px; }
 </div>
 
 <script>
-const VIEWS = ["skills", "plugins", "atlas"];
+const VIEWS = ["skills", "plugins", "atlas", "docs"];
 const SORTS = { category: s => s.category, on: s => s.tokensAlwaysOn, fire: s => s.tokensOnInvoke, files: s => s.tokensBundledMax };
 const RAW_GITHUB = "https://raw.githubusercontent.com/";
 const FLAGS = ["lint", "picked", "twins", "installed", "absent"];
-const state = { data: null, machine: null, setup: false, q: "", cat: null, plug: null, flag: null,
-  view: "skills", sort: { key: "name", dir: 1 }, picked: new Set(), open: new Set(), twins: new Set() };
+const state = { data: null, machine: null, docs: [], page: "", panel: "", q: "", cat: null, plug: null,
+  flag: null, anchor: "", view: "skills", sort: { key: "name", dir: 1 }, picked: new Set(), open: new Set(), twins: new Set() };
 const $ = (id) => document.getElementById(id);
 // Two sources can ship the same skill name, so a pick is keyed by both.
 const skillKey = (s) => s.source + ":" + s.path;
@@ -423,17 +494,31 @@ const k = (n) => (n / 1000).toFixed(1) + "k";
 Promise.all([
   fetch("catalog.json").then(r => r.json()),
   fetch("installed.json").then(r => (r.ok ? r.json() : null)).catch(() => null),
-]).then(([catalog, machine]) => { state.data = catalog; state.machine = machine; boot(); });
+  // The guides a build ships, in reading order. A build without them hides the tab.
+  fetch("docs/index.json").then(r => (r.ok ? r.json() : [])).catch(() => []),
+]).then(([catalog, machine, docs]) => {
+  state.data = catalog;
+  state.machine = machine;
+  state.docs = docs || [];
+  boot();
+});
 
 function boot() {
   applyTheme(stored(localStorage, "theme"));
-  state.setup = Boolean(state.machine && state.machine.suggest);
+  // A machine that installed these plugins under another name is a finding,
+  // so the steps that fix the reading open by themselves.
+  state.panel = state.machine && state.machine.suggest ? "installed" : "";
   readUrl();
   for (const key of stored(sessionStorage, "picked") || []) state.picked.add(key);
   const d = state.data;
   $("regname").textContent = d.registry;
-  for (const id of ["crumb-reg", "crumb-reg-p", "crumb-reg-a"]) $(id).textContent = d.registry;
+  for (const id of ["crumb-reg", "crumb-reg-p", "crumb-reg-a", "crumb-reg-d"]) $(id).textContent = d.registry;
+  $("t-docs").hidden = state.docs.length === 0;
   const nSources = Object.keys(d.sources).length;
+  $("tagline").innerHTML = [
+    escapeHtml(d.description || ""),
+    docFile("README.md") ? docLink("What is Trove?", "README.md") : "",
+  ].filter(Boolean).join(" · ");
   $("totals").innerHTML = `<b>${d.totals.skills}</b> skills from <b>${nSources}</b> source${nSources === 1 ? "" : "s"}` +
     ` · <b>${d.totals.alwaysOn.toLocaleString()}</b> tokens always-on if you install them all.` +
     (hasInstalls() ? ` <b>${installedSkills().length}</b> of them are installed here, ` +
@@ -461,6 +546,8 @@ function boot() {
   $("showpicked").onclick = () => { state.flag = state.flag === "picked" ? null : "picked"; if (state.view === "plugins") state.view = "skills"; writeUrl(true); render(); };
   $("copy").onclick = () => copyText($("snippet").textContent, $("copy"), "Copy bundle");
   $("theme").onclick = toggleTheme;
+  $("add").onclick = () => openDoc("sharing-a-skill.md");
+  $("add").hidden = !docFile("sharing-a-skill.md");
   addEventListener("keydown", e => {
     const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName);
     if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); $("q").focus(); $("q").select(); }
@@ -468,6 +555,12 @@ function boot() {
     else if (e.key === "Escape") { $("q").blur(); }
   });
   addEventListener("popstate", () => { readUrl(); render(); });
+  document.addEventListener("click", e => {
+    const link = e.target.closest("a[data-doc]");
+    if (!link || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    openDoc(link.dataset.doc);
+  });
   render();
 }
 
@@ -499,6 +592,8 @@ function readUrl() {
   state.view = VIEWS.includes(p.get("view")) ? p.get("view") : "skills";
   $("q").value = p.get("q") || "";
   state.q = $("q").value.toLowerCase();
+  state.page = docFile(p.get("page")) || (state.docs[0] || {}).file || "";
+  state.anchor = location.hash.slice(1);
   state.cat = p.get("cat");
   state.plug = p.get("plugin");
   state.flag = FLAGS.includes(p.get("flag")) ? p.get("flag") : null;
@@ -509,13 +604,19 @@ function readUrl() {
 function writeUrl(push) {
   const p = new URLSearchParams();
   if (state.view !== "skills") p.set("view", state.view);
+  if (state.view === "docs" && state.page) p.set("page", state.page);
   if ($("q").value) p.set("q", $("q").value);
   if (state.cat) p.set("cat", state.cat);
   if (state.plug) p.set("plugin", state.plug);
   if (state.flag) p.set("flag", state.flag);
   if (!(state.sort.key === "name" && state.sort.dir === 1)) p.set("sort", state.sort.key + (state.sort.dir < 0 ? ":desc" : ""));
-  const url = location.pathname + (p.toString() ? "?" + p : "");
+  const url = location.pathname + (p.toString() ? "?" + p : "") + (state.view === "docs" && state.anchor ? "#" + state.anchor : "");
   history[push ? "pushState" : "replaceState"](null, "", url);
+}
+
+function togglePanel(kind) {
+  state.panel = state.panel === kind ? "" : kind;
+  render();
 }
 
 function setView(v) {
@@ -610,8 +711,12 @@ function render() {
     $("t-" + v).setAttribute("aria-current", v === state.view ? "page" : "false");
     $("view-" + v).hidden = v !== state.view;
   }
-  renderSetup();
-  if (state.view === "plugins") {
+  renderPanel();
+  if (state.view === "docs") {
+    $("grid").innerHTML = "";
+    $("pgrid").innerHTML = "";
+    renderDocs();
+  } else if (state.view === "plugins") {
     $("grid").innerHTML = "";
     renderPlugins();
   } else {
@@ -670,7 +775,7 @@ function renderFacets(skills) {
     rest.title = "Offered by the registry, but no plugin on this machine ships it";
     flags.appendChild(rest);
   } else {
-    const ask = chip("Installed?", null, state.setup, () => { state.setup = !state.setup; });
+    const ask = chip("Installed?", null, state.panel === "installed", () => { state.panel = state.panel === "installed" ? "" : "installed"; });
     ask.title = "This page has no install state. Open the steps that give it one";
     flags.appendChild(ask);
   }
@@ -707,9 +812,9 @@ function setupSteps() {
     const other = escapeHtml(m.suggest.marketplace);
     return {
       title: "These plugins are installed under another name",
-      note: `Nothing is installed from marketplace <code>${mkt}</code>, but this machine has ` +
-        `<b>${m.suggest.matches}</b> of these plugins under <code>${other}</code>. Trove joins ` +
-        "on that name, so name the one your teammates added.",
+      note: `Nothing is installed from ${docLink("marketplace", "glossary.md#marketplace")} ` +
+        `<code>${mkt}</code>, but this machine has <b>${m.suggest.matches}</b> of these plugins ` +
+        `under <code>${other}</code>. Trove joins on that name, so name the one your teammates added.`,
       steps: [
         { text: "Record it in the bundle, then rebuild:", cmd: `marketplace: ${m.suggest.marketplace}` },
         { text: "Or name it for one run:", cmd: `trove serve --marketplace ${m.suggest.marketplace}`, sh: true },
@@ -735,18 +840,21 @@ function setupSteps() {
   };
 }
 
-function renderSetup() {
+function renderPanel() {
   const slot = $("slot-" + state.view) || null;
-  for (const id of ["slot-skills", "slot-plugins"]) $(id).innerHTML = "";
-  if (!slot || !state.setup || hasInstalls()) return;
+  for (const id of ["slot-skills", "slot-plugins", "slot-atlas"]) $(id).innerHTML = "";
+  if (state.panel === "installed" && hasInstalls()) state.panel = "";
+  if (!slot || !state.panel) return;
   const plan = setupSteps();
   slot.innerHTML = `<section class="setup">
+    <button type="button" class="close" aria-label="Close">×</button>
     <h3>${escapeHtml(plan.title)}</h3>
     <p>${plan.note}</p>
-    <ol>${plan.steps.map(step => `<li>${escapeHtml(step.text)}` +
+    <ol>${plan.steps.map(step => `<li>${step.html || escapeHtml(step.text)}` +
       (step.cmd ? `<div class="cmd${step.sh ? " sh" : ""}"><code>${escapeHtml(step.cmd)}</code>` +
         "<button type=\"button\">Copy</button></div>" : "") + "</li>").join("")}</ol>
   </section>`;
+  slot.querySelector(".close").onclick = () => togglePanel(state.panel);
   for (const cmd of slot.querySelectorAll(".cmd")) {
     const button = cmd.querySelector("button");
     button.onclick = () => copyText(cmd.querySelector("code").textContent, button, "Copy");
@@ -774,7 +882,15 @@ function chip(label, count, pressed, apply) {
   return b;
 }
 
+function renderLegend() {
+  $("legend").innerHTML =
+    `Only <b>${docLink("always-on", "glossary.md#always-on")}</b> is charged every session. A body loads ` +
+    `${docLink("when the skill fires", "glossary.md#when-it-fires")}, and a ` +
+    `${docLink("bundled file", "glossary.md#bundled-files")} only if the body sends it there.`;
+}
+
 function renderList(shown, total) {
+  renderLegend();
   for (const b of $("listhead").querySelectorAll("button[data-sort]")) {
     b.setAttribute("aria-sort", b.dataset.sort === state.sort.key ? (state.sort.dir > 0 ? "ascending" : "descending") : "none");
   }
@@ -807,7 +923,7 @@ function skillRow(s, rank) {
         <h4>${escapeHtml(s.name)}</h4>
         <span class="src">${escapeHtml(s.source)}</span>
         ${mine && mine.installed ? installedPill(mine) : ""}
-        ${s.lint.map(c => `<span class="pill lint" title="Fails the ${escapeHtml(c)} lint check">${escapeHtml(c)}</span>`).join("")}
+        ${s.lint.map(lintPill).join("")}
       </div>
       <p>${escapeHtml(s.description || "")}</p>
     </div>
@@ -846,6 +962,15 @@ function skillRow(s, rank) {
   });
   row.querySelector(".more").onclick = () => toggleOpen(key);
   return row;
+}
+
+// Each finding has a fix, and the fix has a heading in the troubleshooting page.
+function lintPill(code) {
+  const pill = `<span class="pill lint">${escapeHtml(code)}</span>`;
+  if (!docFile("troubleshooting.md")) return pill;
+  const target = `troubleshooting.md#a-skill-is-flagged-${encodeURIComponent(code)}`;
+  return `<a class="plain" href="./?view=docs&page=${escapeHtml(target)}" data-doc="${escapeHtml(target)}"` +
+    ` title="What the ${escapeHtml(code)} finding means, and the fix">${pill}</a>`;
 }
 
 function installedPill(mine) {
@@ -898,7 +1023,7 @@ function renderPlugins() {
         <div class="line">
           <h4>${escapeHtml(p.name)}</h4>
           ${p.version ? `<span class="pill ver">v${escapeHtml(p.version)}</span>` : ""}
-          ${p.curated ? '<span class="pill ok" title="Cherry-picks skills out of its source instead of shipping the whole repo">curated</span>' : ""}
+          ${p.curated ? curatedPill() : ""}
           ${hasInstalls() ? pluginRowState(p, mine) : ""}
         </div>
         <p>${escapeHtml(p.description || "")}</p>
@@ -916,6 +1041,13 @@ function renderPlugins() {
     copyBtn.onclick = () => copyText(cmd, copyBtn, "Copy");
     grid.appendChild(row);
   }
+}
+
+function curatedPill() {
+  const pill = '<span class="pill ok" title="Cherry-picks skills out of its source instead of shipping the whole repo">curated</span>';
+  if (!docFile("glossary.md")) return pill;
+  return '<a class="plain" href="./?view=docs&page=glossary.md#curated" data-doc="glossary.md#curated">' +
+    pill + "</a>";
 }
 
 function pluginRowState(p, mine) {
@@ -942,21 +1074,44 @@ function renderStack() {
   if (!chosen.length) return;
   const on = chosen.reduce((n, s) => n + s.tokensAlwaysOn, 0);
   $("stackcount").innerHTML = `${chosen.length} skill${chosen.length === 1 ? "" : "s"} · <em>+${on.toLocaleString()}</em> always-on`;
-  $("snippet").textContent = bundleYaml(chosen);
+  const blocks = stackBlocks(chosen);
+  $("snippet").textContent = bundleYaml(blocks);
+  renderNext(blocks);
 }
 
-function bundleYaml(chosen) {
+// One block per source: the stack keys picks by source, and a plugin ships
+// from exactly one.
+function stackBlocks(chosen) {
   const bySource = {};
   for (const s of chosen) (bySource[s.source] ||= []).push(s.path);
   const sources = Object.keys(bySource).sort();
+  return sources.map(source => ({
+    name: sources.length > 1 ? `my-stack-${source}` : "my-stack",
+    source,
+    paths: bySource[source].sort(),
+  }));
+}
+
+function bundleYaml(blocks) {
   const lines = [];
-  for (const source of sources) {
-    const name = sources.length > 1 ? `my-stack-${source}` : "my-stack";
-    lines.push(`  - name: ${name}`, `    source: ${source}`,
+  for (const block of blocks) {
+    lines.push(`  - name: ${block.name}`, `    source: ${block.source}`,
       "    description: Curated stack", "    skills:");
-    for (const p of bySource[source].sort()) lines.push(`      - ${p}`);
+    for (const path of block.paths) lines.push(`      - ${path}`);
   }
   return lines.join("\n");
+}
+
+// The copied YAML is a plugin, not an install. Say what turns it into one.
+function renderNext(blocks) {
+  const installs = blocks.map(b => `claude plugin install ${b.name}@${state.data.registry}`);
+  const commands = ["just dist", ...installs].join(" && ");
+  $("next").innerHTML =
+    `<span>Paste it under <code>plugins:</code> in your ${docLink("bundle", "glossary.md#bundle")}, then run:</span>` +
+    `<span class="install"><code>${escapeHtml(commands)}</code>` +
+    '<button type="button" id="copy-next">Copy</button></span>';
+  const button = $("copy-next");
+  button.onclick = () => copyText(commands, button, "Copy");
 }
 
 function copyText(text, button, label) {
@@ -968,6 +1123,187 @@ function copyText(text, button, label) {
 
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+/* ---------- docs ---------- */
+// The guides ship beside the catalog as markdown. The page renders them here
+// so a term in the interface can link to the paragraph that defines it.
+const docCache = new Map();
+
+function docFile(name) {
+  return state.docs.some(page => page.file === name) ? name : "";
+}
+// Docs link to each other the way they sit in the repo, but the build flattens
+// them into one directory beside the catalog.
+function docPath(href) {
+  return href.replace(/^\.\//, "").replace(/^\.\.\//, "").replace(/^docs\//, "");
+}
+
+function docLink(label, target, cls = "gloss") {
+  const [file, anchor] = target.split("#");
+  if (!docFile(file)) return escapeHtml(label);
+  return `<a class="${cls}" href="./?view=docs&page=${encodeURIComponent(file)}#${anchor || ""}"` +
+    ` data-doc="${escapeHtml(target)}" title="What this means in Trove">${escapeHtml(label)}</a>`;
+}
+
+function openDoc(target) {
+  const [file, anchor] = String(target).split("#");
+  const known = docFile(file);
+  if (known) state.page = known;
+  state.anchor = anchor || "";
+  state.view = "docs";
+  writeUrl(true);
+  render();
+  scrollTo({ top: 0 });
+}
+
+function renderDocs() {
+  const current = state.docs.find(p => p.file === state.page) || {};
+  $("crumb-doc").textContent = current.label || current.title || "";
+  const rail = $("doclist");
+  rail.innerHTML = "";
+  for (const page of state.docs) {
+    const link = document.createElement("a");
+    link.href = `./?view=docs&page=${encodeURIComponent(page.file)}`;
+    link.textContent = page.label || page.title;
+    link.setAttribute("aria-current", page.file === state.page ? "page" : "false");
+    link.dataset.doc = page.file;
+    rail.appendChild(link);
+  }
+  if (!state.page) {
+    $("docbody").innerHTML = '<p class="docnote">This build ships no guides.</p>';
+    return;
+  }
+  if (docCache.has(state.page)) return paintDoc(state.page);
+  $("docbody").innerHTML = '<p class="docnote">Loading…</p>';
+  const wanted = state.page;
+  fetch("docs/" + encodeURIComponent(wanted))
+    .then(r => (r.ok ? r.text() : Promise.reject(new Error(r.status))))
+    .then(text => {
+      docCache.set(wanted, mdToHtml(text));
+      if (state.view === "docs" && state.page === wanted) paintDoc(wanted);
+    })
+    .catch(() => {
+      $("docbody").innerHTML = `<p class="docnote">${escapeHtml(wanted)} is missing from this build.</p>`;
+    });
+}
+
+function paintDoc(file) {
+  const page = state.docs.find(p => p.file === file) || {};
+  const verified = page.status === "verified";
+  const label = verified ? "Verified" : "AI draft";
+  const title = verified
+    ? "A human has read this page and stands behind it"
+    : "Drafted by Claude and not yet checked by a human";
+  $("docbody").innerHTML =
+    `<span class="docstatus${verified ? " verified" : ""}" title="${title}">${label}</span>` +
+    docCache.get(file);
+  if (!state.anchor) return;
+  const target = document.getElementById(state.anchor);
+  if (target) target.scrollIntoView({ block: "start" });
+}
+
+function slug(text) {
+  return text.toLowerCase().replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
+}
+
+// A small markdown subset: what the shipped guides actually use.
+function mdToHtml(src) {
+  // Frontmatter carries the page's review status, which the header renders.
+  const body = src.replace(/^---\n[\s\S]*?\n---\n/, "");
+  const lines = body.replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+  let para = [];
+  const flush = () => { if (para.length) { out.push(`<p>${inline(para.join(" "))}</p>`); para = []; } };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^```/.test(line)) {
+      flush();
+      const code = [];
+      while (++i < lines.length && !/^```/.test(lines[i])) code.push(lines[i]);
+      out.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`);
+    } else if (/^#{1,6}\s/.test(line)) {
+      flush();
+      const level = line.match(/^#+/)[0].length;
+      const text = line.slice(level).trim();
+      out.push(`<h${level} id="${escapeHtml(slug(text))}">${inline(text)}</h${level}>`);
+    } else if (/^\s*([-*]|\d+\.)\s+/.test(line)) {
+      flush();
+      const ordered = /^\s*\d+\./.test(line);
+      const items = [];
+      while (i < lines.length && /^\s*([-*]|\d+\.)\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*([-*]|\d+\.)\s+/, ""));
+        i++;
+      }
+      i--;
+      const tag = ordered ? "ol" : "ul";
+      out.push(`<${tag}>${items.map(item => `<li>${inline(item)}</li>`).join("")}</${tag}>`);
+    } else if (/^\s*\|/.test(line) && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1] || "")) {
+      flush();
+      const head = cells(line);
+      const body = [];
+      i += 2;
+      while (i < lines.length && /^\s*\|/.test(lines[i])) body.push(cells(lines[i++]));
+      i--;
+      out.push('<div class="tablewrap"><table><thead><tr>' +
+        head.map(c => `<th>${inline(c)}</th>`).join("") + "</tr></thead><tbody>" +
+        body.map(row => "<tr>" + row.map(c => `<td>${inline(c)}</td>`).join("") + "</tr>").join("") +
+        "</tbody></table></div>");
+    } else if (/^\s*>\s?/.test(line)) {
+      flush();
+      out.push(`<blockquote>${inline(line.replace(/^\s*>\s?/, ""))}</blockquote>`);
+    } else if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
+      flush();
+      out.push("<hr>");
+    } else if (!line.trim()) {
+      flush();
+    } else {
+      para.push(line.trim());
+    }
+  }
+  flush();
+  return out.join("\n");
+}
+
+function cells(row) {
+  return row.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(c => c.trim());
+}
+
+// Links come out first: a label like [`just`](url) would otherwise be split by
+// the code-span pass before the link ever matched.
+function inline(text) {
+  const parked = [];
+  const park = html => `\u0000${parked.push(html) - 1}\u0000`;
+  const linked = escapeHtml(text)
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (m, alt, src) =>
+      park(`<img alt="${alt}" src="docs/${docPath(src)}" loading="lazy">`))
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, label, href) => park(mdLink(spans(label), href)));
+  return spans(linked).replace(/\u0000(\d+)\u0000/g, (m, i) => parked[i]);
+}
+
+// Code, bold, and italics over already-escaped text.
+function spans(text) {
+  return text
+    .split(/(`[^`]+`)/g)
+    .map(part =>
+      part.startsWith("`") && part.endsWith("`")
+        ? `<code>${part.slice(1, -1)}</code>`
+        : part
+            .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+            .replace(/(^|[\s(])_([^_]+)_(?=[\s).,;:]|$)/g, "$1<i>$2</i>"))
+    .join("");
+}
+
+// Only three destinations are legitimate in a shipped guide: another page of
+// this build, an anchor on this one, or a public URL.
+function mdLink(label, href) {
+  if (/^https?:/.test(href)) return `<a href="${href}" target="_blank" rel="noopener">${label}</a>`;
+  if (href.startsWith("#")) return `<a href="${href}">${label}</a>`;
+  const [file, anchor] = docPath(href).split("#");
+  if (docFile(file)) {
+    return `<a href="./?view=docs&page=${file}#${anchor || ""}" data-doc="${file}#${anchor || ""}">${label}</a>`;
+  }
+  return label;
 }
 
 /* ---------- atlas ---------- */

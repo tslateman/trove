@@ -1504,3 +1504,128 @@ def test_a_build_with_no_catalog_says_so_rather_than_claiming_nothing_is_install
         assert "catalog.json" in payload["reason"]
     finally:
         server.shutdown()
+
+
+# --- the guides a build ships ---
+
+
+def _docs_repo(tmp_path: Path) -> Path:
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "glossary.md").write_text("# Glossary\n\n### Bundle\n\nOne file.\n")
+    (docs / "cli.md").write_text("# CLI reference\n\ntext\n")
+    (docs / "demo.gif").write_bytes(b"GIF89a")
+    (tmp_path / "README.md").write_text("# Trove\n\nfront door\n")
+    return tmp_path
+
+
+def test_the_build_ships_the_guides_beside_the_catalog(tmp_path):
+    import json
+
+    from trove.cli import ship_docs
+
+    root = _docs_repo(tmp_path)
+    out = tmp_path / "out"
+    pages = ship_docs(out, root)
+
+    assert [page["file"] for page in pages] == ["README.md", "cli.md", "glossary.md"]
+    assert pages[0]["title"] == "Trove"
+    assert pages[2]["title"] == "Glossary"
+    assert {page["status"] for page in pages} == {"draft"}
+    assert (out / "docs" / "demo.gif").is_file()
+    assert json.loads((out / "docs" / "index.json").read_text()) == pages
+
+
+def test_a_registry_with_no_guides_ships_none(tmp_path):
+    from trove.cli import ship_docs
+
+    assert ship_docs(tmp_path / "out", tmp_path) == []
+    assert not (tmp_path / "out" / "docs").exists()
+
+
+def test_a_page_with_no_heading_falls_back_to_its_filename(tmp_path):
+    from trove.cli import doc_entry
+
+    page = tmp_path / "release-notes.md"
+    page.write_text("no heading here\n")
+    assert doc_entry(page)["title"] == "Release notes"
+
+
+def test_a_page_names_itself_in_the_rail_when_its_heading_is_not_a_nav_label(tmp_path):
+    from trove.cli import doc_entry
+
+    page = tmp_path / "README.md"
+    page.write_text("---\nlabel: Overview\n---\n\n# Trove\n\ntext\n")
+    entry = doc_entry(page)
+    assert (entry["title"], entry["label"]) == ("Trove", "Overview")
+
+    page.write_text("# Trove\n\ntext\n")
+    entry = doc_entry(page)
+    assert (entry["title"], entry["label"]) == ("Trove", "Trove")
+
+
+def test_a_page_is_an_ai_draft_until_a_human_marks_it_verified(tmp_path):
+    from trove.cli import doc_entry
+
+    page = tmp_path / "cli.md"
+    page.write_text("# CLI reference\n\ntext\n")
+    assert doc_entry(page)["status"] == "draft"
+
+    page.write_text("---\nstatus: draft\n---\n\n# CLI reference\n\ntext\n")
+    assert doc_entry(page) == {
+        "file": "cli.md",
+        "title": "CLI reference",
+        "label": "CLI reference",
+        "status": "draft",
+    }
+
+    page.write_text("---\nstatus: verified\n---\n\n# CLI reference\n\ntext\n")
+    assert doc_entry(page)["status"] == "verified"
+
+
+def test_every_term_the_interface_links_to_has_a_glossary_section():
+    """A dotted-underline term that names no section scrolls nowhere."""
+    import re
+
+    page = Path("src/trove/web/index.html").read_text()
+    linked = set(re.findall(r'docLink\([^,]+,\s*"glossary\.md#([\w-]+)"', page))
+    glossary = Path("docs/glossary.md").read_text()
+    slugs = {
+        re.sub(r"[^\w\s-]", "", line.lstrip("# ").strip()).lower().replace(" ", "-")
+        for line in glossary.splitlines()
+        if line.startswith("#")
+    }
+    assert linked, "the interface links no term to the glossary"
+    assert linked <= slugs, f"no glossary section for {sorted(linked - slugs)}"
+
+
+def test_every_link_between_doc_pages_lands_on_a_real_heading():
+    """A renamed heading breaks a link silently: the reader lands at the top."""
+    import re
+
+    pages = [Path("README.md"), Path("ROADMAP.md"), *sorted(Path("docs").glob("*.md"))]
+    slugs = {}
+    for page in pages:
+        text = page.read_text()
+        slugs[page.name] = {
+            re.sub(r"[^\w\s-]", "", line.lstrip("#").strip()).lower().replace(" ", "-")
+            for line in text.splitlines()
+            if line.startswith("#")
+        }
+
+    broken = []
+    for page in pages:
+        for target in re.findall(r"\]\(([^)]+)\)", page.read_text()):
+            if target.startswith(("http", "mailto:")):
+                continue
+            file, _, anchor = target.partition("#")
+            if file and not file.endswith(".md"):
+                if not (page.parent / file).exists():
+                    broken.append(f"{page.name} -> {target} (no such file)")
+                continue
+            name = Path(file).name if file else page.name
+            if name not in slugs:
+                broken.append(f"{page.name} -> {target} (no such page)")
+            elif anchor and anchor not in slugs[name]:
+                broken.append(f"{page.name} -> {target} (no such heading)")
+    assert not broken, "\n".join(broken)

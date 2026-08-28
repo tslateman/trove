@@ -1,4 +1,11 @@
-# Trove Roadmap
+---
+status: draft
+---
+
+# Roadmap
+
+What Trove does today is in the [README](README.md). This page is what it does
+not do yet, and what it deliberately will not do.
 
 Intent, not schedule. For status, read git.
 
@@ -94,12 +101,18 @@ The stack-picker collision under Known gaps was this problem surfacing as a
 bug; the picker now keys by source, but the redundancy it exposed remains
 unmeasured.
 
-## Known gaps
+## Known limits
 
 Documented in the README under Known limits; repeated here as work.
 
 - [ ] Index plugins that ship agents, commands, or hooks. Today they report zero
       skills.
+- [ ] **Submit a skill from the catalog.** Adding a skill today means a terminal:
+      `just promote`, a commit, and a push. The page knows the sources and the
+      paths, so it could take a `SKILL.md` from a drop or a paste, lint and price
+      it before anything is written, and hand back the branch or pull request
+      that puts it in the repo that should own it. The open question is what a
+      published catalog is allowed to write, and with whose credentials.
 - [x] Catalog a source that has only a remote. Sources are fetched and cached by
       commit sha, so a bundle indexes the same everywhere, CI included.
 - [x] Count a skill's bundled files. The card and `scan --verbose` now price
