@@ -16,3 +16,4 @@ bundles/*.yaml
 !bundles/registry.yaml
 !bundles/twins.yaml
 !bundles/lint.yaml
+cloudflare.token
