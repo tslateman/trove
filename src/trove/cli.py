@@ -91,9 +91,9 @@ DOC_FIRST = (
     "troubleshooting.md",
     "sharing-a-skill.md",
 )
-DOC_LAST = ("glossary.md", "landscape.md", "ROADMAP.md")
+DOC_LAST = ("glossary.md", "landscape.md", "CHANGELOG.md", "ROADMAP.md")
 # Pages that live at the repo root rather than in docs/.
-ROOT_PAGES = ("README.md", "ROADMAP.md")
+ROOT_PAGES = ("README.md", "CHANGELOG.md", "ROADMAP.md")
 
 
 def doc_order(path: Path) -> tuple[int, int, str]:
