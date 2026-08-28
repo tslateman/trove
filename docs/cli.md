@@ -89,7 +89,7 @@ Recipes: `just catalog`, `just catalog-offline`, `just dist`, `just orphans`,
 Serve the built site on localhost.
 
 ```bash
-trove serve [--port PORT]
+trove serve [--port PORT] [--marketplace NAME]
 ```
 
 Defaults to port 8787. The handler sends no-cache headers and ignores
@@ -106,7 +106,49 @@ request cannot climb out of the checkout it names.
 curl http://127.0.0.1:8787/body/drafts/skills/craft/tidy/SKILL.md
 ```
 
-Recipes: `just serve`, `just open`, `just stop`.
+`serve` answers `/installed.json` too, computed per request from
+`claude plugin list --json`. That is what gives the page its Installed filter.
+It is never written into `--out`, so a published build carries no trace of who
+installed what. `--marketplace` names the registry the way this machine files
+it, for a bundle whose name differs; it does the same job as `marketplace:` in
+the bundle and overrides it.
+
+Recipes: `just serve`, `just open`, `just stop`. `just --set marketplace NAME
+serve` passes the override.
+
+## installed
+
+Report which of the bundle's plugins this machine has.
+
+```bash
+trove installed [--marketplace NAME]
+```
+
+```
+marketplace 'tslateman' (configured)
+
+plugin                        offered  installed  state
+tslateman-skills                0.6.0      0.5.0  enabled, update
+review-kit                      0.1.0      0.1.0  installed, disabled
+trove                           0.1.0          —  not installed
+
+2 of 3 plugins installed, 1 enabled
+~5,140 tok always-on from the 44 skills enabled here, of ~7,853 offered
+```
+
+The reading comes from `claude plugin list --json` and
+`claude plugin marketplace list --json`, joined to the catalog on
+`<plugin>@<marketplace>`. `installed` is the version this machine holds and
+`offered` is the version the registry publishes, so `update` means the two
+disagree. A plugin installed at both user and local scope reports the version
+Claude Code loads.
+
+When nothing joins, the command says what to do about it: it names the
+marketplace that does ship these plugin names, or the commands that add the
+registry and install from it. Exits 1 only when it cannot read the machine at
+all, since an empty install is a real answer.
+
+Recipe: `just installed`, and `just installed --marketplace NAME`.
 
 ## lint
 

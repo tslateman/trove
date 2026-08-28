@@ -116,10 +116,28 @@ main { padding-top: 26px; padding-bottom: 60px; }
 .chip:hover { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 .chip[aria-pressed=true] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 500; }
 .chip.warnish[aria-pressed=true] { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+.chip.okish[aria-pressed=true] { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
 .showing { margin-left: auto; font: 12.5px/1 var(--mono); color: var(--muted); }
 .showing button { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0 0 0 8px; font: inherit; }
 .legend { margin: 0 0 12px; font-size: 12.5px; color: var(--muted); }
 .legend b { color: var(--ok); font-weight: 600; }
+
+/* ---------- install-state setup ---------- */
+.setup { border: 1px solid var(--accent); border-radius: 12px; background: var(--panel);
+  box-shadow: var(--shadow); padding: 15px 18px 17px; margin: 0 0 16px; }
+.setup h3 { margin: 0 0 5px; font-size: 15px; }
+.setup > p { margin: 0 0 12px; color: var(--muted); font-size: 13.5px; max-width: 76ch; }
+.setup code { font: 12.5px/1 var(--mono); color: var(--ink); }
+.setup > p code { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 2px 5px; }
+.setup ol { margin: 0; padding-left: 19px; display: grid; gap: 11px; }
+.setup li { font-size: 13.5px; color: var(--muted); min-width: 0; }
+.setup .cmd { display: flex; align-items: stretch; margin-top: 5px; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--bg); overflow: hidden; font: 12px/1.4 var(--mono); }
+.setup .cmd code { flex: 1; min-width: 0; padding: 8px 10px; overflow-x: auto; white-space: pre; color: var(--ink); }
+.setup .cmd.sh code::before { content: "$ "; color: var(--muted); }
+.setup .cmd button { border: 0; border-left: 1px solid var(--line); background: var(--panel);
+  color: var(--muted); padding: 0 10px; cursor: pointer; font: 12px/1 var(--mono); }
+.setup .cmd button:hover { color: var(--accent); }
 
 /* ---------- list ---------- */
 .list { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); overflow: hidden; }
@@ -159,6 +177,8 @@ main { padding-top: 26px; padding-bottom: 60px; }
 .pill.lint { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
 .pill.ver { font-weight: 600; color: var(--ink); }
 .pill.ok { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
+.pill.off { border-style: dashed; }
+.pill.upd { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
 .catcell { display: flex; }
 .num { font: 13px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .num.on { color: var(--ok); font-weight: 600; }
@@ -323,6 +343,7 @@ main { padding-top: 26px; padding-bottom: 60px; }
       <div class="group" id="f-flag" role="group" aria-label="Flags"></div>
       <span class="showing" id="showing"></span>
     </div>
+    <div id="slot-skills"></div>
     <p class="legend" id="legend">Only <b>always-on</b> is charged every session. A body loads
       when the skill fires, and a bundled file only if the body sends it there.</p>
     <div class="list">
@@ -348,6 +369,7 @@ main { padding-top: 26px; padding-bottom: 60px; }
         <p class="lede" id="ptotals"></p>
       </div>
     </div>
+    <div id="slot-plugins"></div>
     <div class="list">
       <div id="pgrid" role="list"></div>
       <div class="empty" id="pempty" hidden>No plugin matches.</div>
@@ -387,17 +409,25 @@ main { padding-top: 26px; padding-bottom: 60px; }
 const VIEWS = ["skills", "plugins", "atlas"];
 const SORTS = { category: s => s.category, on: s => s.tokensAlwaysOn, fire: s => s.tokensOnInvoke, files: s => s.tokensBundledMax };
 const RAW_GITHUB = "https://raw.githubusercontent.com/";
-const state = { data: null, q: "", cat: null, plug: null, flag: null, view: "skills",
-  sort: { key: "name", dir: 1 }, picked: new Set(), open: new Set(), twins: new Set() };
+const FLAGS = ["lint", "picked", "twins", "installed", "absent"];
+const state = { data: null, machine: null, setup: false, q: "", cat: null, plug: null, flag: null,
+  view: "skills", sort: { key: "name", dir: 1 }, picked: new Set(), open: new Set(), twins: new Set() };
 const $ = (id) => document.getElementById(id);
 // Two sources can ship the same skill name, so a pick is keyed by both.
 const skillKey = (s) => s.source + ":" + s.path;
 const k = (n) => (n / 1000).toFixed(1) + "k";
 
-fetch("catalog.json").then(r => r.json()).then(d => { state.data = d; boot(); });
+// The catalog is what the registry offers. `installed.json` is what this
+// machine has, and only `trove serve` answers for it: a published build has no
+// endpoint, so the page falls back to explaining how to get one.
+Promise.all([
+  fetch("catalog.json").then(r => r.json()),
+  fetch("installed.json").then(r => (r.ok ? r.json() : null)).catch(() => null),
+]).then(([catalog, machine]) => { state.data = catalog; state.machine = machine; boot(); });
 
 function boot() {
   applyTheme(stored(localStorage, "theme"));
+  state.setup = Boolean(state.machine && state.machine.suggest);
   readUrl();
   for (const key of stored(sessionStorage, "picked") || []) state.picked.add(key);
   const d = state.data;
@@ -405,9 +435,13 @@ function boot() {
   for (const id of ["crumb-reg", "crumb-reg-p", "crumb-reg-a"]) $(id).textContent = d.registry;
   const nSources = Object.keys(d.sources).length;
   $("totals").innerHTML = `<b>${d.totals.skills}</b> skills from <b>${nSources}</b> source${nSources === 1 ? "" : "s"}` +
-    ` · <b>${d.totals.alwaysOn.toLocaleString()}</b> tokens always-on if you install them all.`;
+    ` · <b>${d.totals.alwaysOn.toLocaleString()}</b> tokens always-on if you install them all.` +
+    (hasInstalls() ? ` <b>${installedSkills().length}</b> of them are installed here, ` +
+      `<b>${enabledSkills().length}</b> enabled at <b>${liveCost().toLocaleString()}</b> tokens today.` : "");
   $("ptotals").innerHTML = `<b>${d.plugins.length}</b> plugin${d.plugins.length === 1 ? "" : "s"} composed from ` +
-    `<b>${nSources}</b> source${nSources === 1 ? "" : "s"}. Each row carries its install command.`;
+    `<b>${nSources}</b> source${nSources === 1 ? "" : "s"}. Each row carries its install command.` +
+    (hasInstalls() ? ` <b>${state.machine.totals.plugins}</b> installed on this machine, ` +
+      `<b>${state.machine.totals.enabled}</b> of those enabled.` : "");
 
   $("q").addEventListener("input", e => { state.q = e.target.value.toLowerCase(); writeUrl(); render(); });
   for (const v of VIEWS) $("t-" + v).addEventListener("click", e => {
@@ -467,7 +501,8 @@ function readUrl() {
   state.q = $("q").value.toLowerCase();
   state.cat = p.get("cat");
   state.plug = p.get("plugin");
-  state.flag = ["lint", "picked", "twins"].includes(p.get("flag")) ? p.get("flag") : null;
+  state.flag = FLAGS.includes(p.get("flag")) ? p.get("flag") : null;
+  if (!hasInstalls() && (state.flag === "installed" || state.flag === "absent")) state.flag = null;
   const [key, dir] = (p.get("sort") || "name").split(":");
   state.sort = key === "name" || SORTS[key] ? { key, dir: dir === "desc" ? -1 : 1 } : { key: "name", dir: 1 };
 }
@@ -497,12 +532,41 @@ function togglePick(key) {
   render();
 }
 
+/* ---------- what this machine has ---------- */
+// `plugins` carries only what is installed, so a name missing from it is a
+// name this machine does not have.
+function machinePlugins() {
+  return state.machine && state.machine.available ? state.machine.plugins : null;
+}
+function hasInstalls() {
+  const p = machinePlugins();
+  return Boolean(p && Object.keys(p).length);
+}
+function marketplaceName() {
+  return (state.machine && state.machine.marketplace) || state.data.marketplace || state.data.registry;
+}
+// A skill arrives through its plugins: installed when any of them is, and
+// charged only when one of those is also enabled.
+function skillMachine(s) {
+  const all = machinePlugins();
+  if (!all) return null;
+  const owners = s.plugins.map(n => all[n]).filter(Boolean);
+  return { installed: owners.length > 0, enabled: owners.some(o => o.enabled) };
+}
+function installedSkills() { return state.data.skills.filter(s => skillMachine(s).installed); }
+function enabledSkills() { return state.data.skills.filter(s => skillMachine(s).enabled); }
+function liveCost() {
+  return state.data.skills.reduce((n, s) => n + (skillMachine(s).enabled ? s.tokensAlwaysOn : 0), 0);
+}
+
 /* ---------- filtering ---------- */
 function matches(s) {
   if (state.cat && s.category !== state.cat) return false;
   if (state.plug && !s.plugins.includes(state.plug)) return false;
   if (state.flag === "lint" && !s.lint.length) return false;
   if (state.flag === "twins" && !state.twins.has(s.name)) return false;
+  if (state.flag === "installed" && !skillMachine(s).installed) return false;
+  if (state.flag === "absent" && skillMachine(s).installed) return false;
   if (state.flag === "picked" && !state.picked.has(skillKey(s))) return false;
   if (!state.q) return true;
   return (s.name + " " + s.description + " " + (s.tags || []).join(" ")).toLowerCase().includes(state.q);
@@ -546,6 +610,7 @@ function render() {
     $("t-" + v).setAttribute("aria-current", v === state.view ? "page" : "false");
     $("view-" + v).hidden = v !== state.view;
   }
+  renderSetup();
   if (state.view === "plugins") {
     $("grid").innerHTML = "";
     renderPlugins();
@@ -593,11 +658,98 @@ function renderFacets(skills) {
   lintChip.classList.add("warnish");
   lintChip.title = "Skills whose frontmatter would stop Claude Code from choosing or reading them as written; each row names the failed check";
   flags.appendChild(lintChip);
+  if (hasInstalls()) {
+    const here = skills.filter(s => skillMachine(s).installed).length;
+    const mine = chip("Installed", here, state.flag === "installed",
+      () => { state.flag = state.flag === "installed" ? null : "installed"; });
+    mine.classList.add("okish");
+    mine.title = `Shipped by a plugin installed from marketplace ${marketplaceName()}`;
+    flags.appendChild(mine);
+    const rest = chip("Not installed", skills.length - here, state.flag === "absent",
+      () => { state.flag = state.flag === "absent" ? null : "absent"; });
+    rest.title = "Offered by the registry, but no plugin on this machine ships it";
+    flags.appendChild(rest);
+  } else {
+    const ask = chip("Installed?", null, state.setup, () => { state.setup = !state.setup; });
+    ask.title = "This page has no install state. Open the steps that give it one";
+    flags.appendChild(ask);
+  }
   if (state.twins.size) {
     const twinChip = chip("Shipped twice", skills.filter(s => state.twins.has(s.name)).length, state.flag === "twins",
       () => { state.flag = state.flag === "twins" ? null : "twins"; });
     twinChip.title = "A skill name that more than one source ships; the row's source label tells them apart";
     flags.appendChild(twinChip);
+  }
+}
+
+// What to do when the page cannot tell installed from offered. Each branch
+// names the specific reason, so the steps fit the machine reading them.
+function setupSteps() {
+  const m = state.machine;
+  const mkt = escapeHtml(marketplaceName());
+  if (!m) {
+    return {
+      title: "This page cannot see your machine",
+      note: "Trove reads installed plugins from <code>claude plugin list</code>, and only the " +
+        "local preview server answers for it. A published build never carries install state.",
+      steps: [{ text: "Serve the catalog from the checkout, then reload:", cmd: "just serve", sh: true }],
+    };
+  }
+  if (!m.available) {
+    return {
+      title: "Trove could not ask what is installed",
+      note: `The preview server ran <code>claude plugin list --json</code> and got: ` +
+        `${escapeHtml(m.reason || "no answer")}.`,
+      steps: [{ text: "Run it yourself to see the failure:", cmd: "claude plugin list --json", sh: true }],
+    };
+  }
+  if (m.suggest) {
+    const other = escapeHtml(m.suggest.marketplace);
+    return {
+      title: "These plugins are installed under another name",
+      note: `Nothing is installed from marketplace <code>${mkt}</code>, but this machine has ` +
+        `<b>${m.suggest.matches}</b> of these plugins under <code>${other}</code>. Trove joins ` +
+        "on that name, so name the one your teammates added.",
+      steps: [
+        { text: "Record it in the bundle, then rebuild:", cmd: `marketplace: ${m.suggest.marketplace}` },
+        { text: "Or name it for one run:", cmd: `trove serve --marketplace ${m.suggest.marketplace}`, sh: true },
+      ],
+    };
+  }
+  const first = (state.data.plugins[0] || {}).name || "<plugin>";
+  const steps = [];
+  if (!m.configured) {
+    steps.push({
+      text: m.add ? "Add this build as a marketplace:" : "Add this registry the way its README names it:",
+      cmd: `claude plugin marketplace add ${m.add || "<owner/repo or URL>"}`,
+      sh: true,
+    });
+  }
+  steps.push({ text: "Install a plugin from it:", cmd: `claude plugin install ${first}@${marketplaceName()}`, sh: true });
+  steps.push({ text: "Reload this page. Installed skills gain a filter, a badge, and a running cost." });
+  return {
+    title: `Nothing from ${mkt} is installed here`,
+    note: `This machine runs Claude Code, and <code>claude plugin list</code> reports no plugin ` +
+      `from marketplace <code>${mkt}</code>.`,
+    steps,
+  };
+}
+
+function renderSetup() {
+  const slot = $("slot-" + state.view) || null;
+  for (const id of ["slot-skills", "slot-plugins"]) $(id).innerHTML = "";
+  if (!slot || !state.setup || hasInstalls()) return;
+  const plan = setupSteps();
+  slot.innerHTML = `<section class="setup">
+    <h3>${escapeHtml(plan.title)}</h3>
+    <p>${plan.note}</p>
+    <ol>${plan.steps.map(step => `<li>${escapeHtml(step.text)}` +
+      (step.cmd ? `<div class="cmd${step.sh ? " sh" : ""}"><code>${escapeHtml(step.cmd)}</code>` +
+        "<button type=\"button\">Copy</button></div>" : "") + "</li>").join("")}</ol>
+  </section>`;
+  for (const cmd of slot.querySelectorAll(".cmd")) {
+    const button = cmd.querySelector("button");
+    button.onclick = () => copyText(cmd.querySelector("code").textContent, button, "Copy");
   }
 }
 
@@ -646,6 +798,7 @@ function skillRow(s, rank) {
   row.setAttribute("role", "listitem");
   row.dataset.key = key;
   const link = bodyLink(s);
+  const mine = skillMachine(s);
   row.innerHTML = `
     <label class="pickcell"><input type="checkbox" class="pick" aria-label="Pick ${escapeHtml(s.name)}"${picked ? " checked" : ""}></label>
     <span class="rank">${rank}</span>
@@ -653,6 +806,7 @@ function skillRow(s, rank) {
       <div class="line">
         <h4>${escapeHtml(s.name)}</h4>
         <span class="src">${escapeHtml(s.source)}</span>
+        ${mine && mine.installed ? installedPill(mine) : ""}
         ${s.lint.map(c => `<span class="pill lint" title="Fails the ${escapeHtml(c)} lint check">${escapeHtml(c)}</span>`).join("")}
       </div>
       <p>${escapeHtml(s.description || "")}</p>
@@ -672,6 +826,7 @@ function skillRow(s, rank) {
       <dl>
         <dt>Path</dt><dd>${escapeHtml(s.source)} / ${escapeHtml(s.path)}</dd>
         <dt>Shipped by</dt><dd>${s.plugins.length ? s.plugins.map(p => `<span class="pill">${escapeHtml(p)}</span>`).join("") : "no plugin"}</dd>
+        ${hasInstalls() ? `<dt>On this machine</dt><dd>${s.plugins.map(pluginStatePill).join("")}</dd>` : ""}
         ${(s.tags || []).length ? `<dt>Tags</dt><dd>${s.tags.map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("")}</dd>` : ""}
         ${s.lint.length ? `<dt>Lint</dt><dd>${s.lint.map(c => `<span class="pill lint">${escapeHtml(c)}</span>`).join("")}</dd>` : ""}
         <dt>Cost</dt><dd>+${s.tokensAlwaysOn} tokens every session · ${s.tokensOnInvoke.toLocaleString()} when it fires${s.bundledFiles ? ` · up to ${s.tokensBundledMax.toLocaleString()} across ${s.bundledFiles} bundled file${s.bundledFiles === 1 ? "" : "s"}` : ""}</dd>
@@ -691,6 +846,20 @@ function skillRow(s, rank) {
   });
   row.querySelector(".more").onclick = () => toggleOpen(key);
   return row;
+}
+
+function installedPill(mine) {
+  return mine.enabled
+    ? '<span class="pill ok" title="A plugin on this machine ships this skill, and it is enabled">installed</span>'
+    : '<span class="pill off" title="Installed, but every plugin that ships it is disabled, so Claude Code does not load it">disabled</span>';
+}
+
+function pluginStatePill(name) {
+  const record = machinePlugins()[name];
+  const label = !record ? "not installed" : record.enabled ? "enabled" : "installed, disabled";
+  const version = record && record.version ? ` v${record.version}` : "";
+  return `<span class="pill ${!record ? "off" : record.enabled ? "ok" : ""}">` +
+    `${escapeHtml(name + version)} · ${label}</span>`;
 }
 
 function toggleOpen(key) {
@@ -721,13 +890,16 @@ function renderPlugins() {
     const row = document.createElement("article");
     row.className = "row plugin pcols";
     row.setAttribute("role", "listitem");
-    const cmd = `claude plugin install ${p.name}@${state.data.registry}`;
+    const mine = machinePlugins() ? machinePlugins()[p.name] || null : null;
+    const cmd = `claude plugin ${!mine ? "install" : !mine.enabled ? "enable" : mine.update ? "update" : "install"}` +
+      ` ${p.name}@${marketplaceName()}`;
     row.innerHTML = `
       <div class="ident">
         <div class="line">
           <h4>${escapeHtml(p.name)}</h4>
           ${p.version ? `<span class="pill ver">v${escapeHtml(p.version)}</span>` : ""}
           ${p.curated ? '<span class="pill ok" title="Cherry-picks skills out of its source instead of shipping the whole repo">curated</span>' : ""}
+          ${hasInstalls() ? pluginRowState(p, mine) : ""}
         </div>
         <p>${escapeHtml(p.description || "")}</p>
         <div class="meta">
@@ -744,6 +916,15 @@ function renderPlugins() {
     copyBtn.onclick = () => copyText(cmd, copyBtn, "Copy");
     grid.appendChild(row);
   }
+}
+
+function pluginRowState(p, mine) {
+  if (!mine) return '<span class="pill off" title="Offered by this registry, absent from this machine">not installed</span>';
+  const scope = mine.projects.length ? `, local to ${mine.projects.join(", ")}` : "";
+  const state = mine.enabled ? "installed" : "installed, disabled";
+  const pill = `<span class="pill ${mine.enabled ? "ok" : "off"}" title="Version ${escapeHtml(mine.version || "unknown")} on this machine${escapeHtml(scope)}">${state}</span>`;
+  if (!mine.update) return pill;
+  return pill + `<span class="pill upd" title="This machine has ${escapeHtml(mine.version || "?")}; the registry offers ${escapeHtml(p.version || "?")}">update</span>`;
 }
 
 function renderAtlasView(shown, total) {

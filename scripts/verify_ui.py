@@ -71,6 +71,55 @@ ALWAYS_ON_COLUMN = (
 )
 
 
+def flag_chip(page, label: str):
+    """The Show chip whose label reads exactly `label`, counts excluded."""
+    chips = page.locator("#f-flag button")
+    for i in range(chips.count()):
+        if chips.nth(i).inner_text().split("\n")[0] == label:
+            return chips.nth(i)
+    return None
+
+
+def check_installed(page, theme: str) -> list[str]:
+    """Installed state is machine-local: the page either filters by it or says
+    how to get it. Both branches are checked, whichever this machine produces."""
+    problems: list[str] = []
+    ask = flag_chip(page, "Installed?")
+    if ask is not None:
+        # The steps open by themselves when the machine has an answer the page
+        # cannot join, so toggle toward open rather than assuming it is closed.
+        opened = page.locator(".setup").count() > 0
+        ask.click()
+        page.wait_for_timeout(150)
+        if opened == (page.locator(".setup").count() > 0):
+            problems.append(f"[{theme}] the Installed? chip did not toggle the steps")
+        if opened:
+            ask.click()
+            page.wait_for_timeout(150)
+        if page.locator(".setup .cmd code").count() == 0:
+            problems.append(
+                f"[{theme}] the page carries no install state and offers no command to get it"
+            )
+        ask.click()
+        page.wait_for_timeout(100)
+        return problems
+
+    chip = flag_chip(page, "Installed")
+    chip.click()
+    page.wait_for_timeout(150)
+    shown = page.locator(".row").count()
+    badged = page.locator(".row .ident .pill.ok, .row .ident .pill.off").count()
+    if shown != badged:
+        problems.append(
+            f"[{theme}] {shown} rows pass the Installed filter but {badged} carry the badge"
+        )
+    if "flag=installed" not in page.url:
+        problems.append(f"[{theme}] the Installed filter did not reach the URL: {page.url}")
+    chip.click()
+    page.wait_for_timeout(100)
+    return problems
+
+
 def check(
     page, url: str, expected_skills: int, shots: Path | None, theme: str
 ) -> tuple[list[str], str]:
@@ -150,6 +199,8 @@ def check(
         )
     page.locator("#f-cat button").nth(0).click()
     page.wait_for_timeout(100)
+
+    problems += check_installed(page, theme)
 
     page.click("#t-atlas")
     page.wait_for_selector("#mapbox svg", timeout=5000)

@@ -60,4 +60,5 @@ def load_bundle(path: Path) -> Bundle:
         sources=sources,
         plugins=plugins,
         renames=data.get("renames") or {},
+        marketplace=data.get("marketplace"),
     )

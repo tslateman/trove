@@ -122,6 +122,11 @@ category tile to narrow, and sort by any cost column. Pick skills to build a
 stack, then copy the generated bundle YAML. With more than one source, the
 Shipped twice filter shows the names both ship; see [Twins](../README.md#twins).
 
+The Show row also carries an Installed filter once a plugin from this registry
+is installed on the machine. Until then it carries a question mark, and opening
+it prints the commands that give the page an answer; see
+[Installed, not just offered](../README.md#installed-not-just-offered).
+
 Press `just stop` when you are done.
 
 ## Step 4: Pin and publish
