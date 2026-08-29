@@ -74,6 +74,19 @@ Tessl scores what Trove's roadmap lists as open. Publishing runs quality scoring
 `tessl eval run` runs standalone, and `tessl review run security` runs a Snyk
 scan. Trove's eval and security items are unstarted.
 
+## The wider field
+
+This page compares four registries closely. The field is larger. A survey
+published 2026-07-06 names Microsoft APM, Agensi, skild.sh, and JFrog's Skills
+Registry beside Tessl and skills.sh, and reports browse-only directories
+advertising roughly 12,000, 21,000, and 2 million skills. It calls those counts
+self-reported and "almost always indexing artifacts", then answers them: "A big
+number tells you nothing about whether the one skill you actually need installs
+cleanly."
+
+Read it for the shape of the field rather than its ranking. The scorecard it
+carries places its own author's product first.
+
 ## Sources
 
 - [Tessl CLI commands](https://docs.tessl.io/reference/cli-commands.md),
@@ -85,3 +98,6 @@ scan. Trove's eval and security items are unstarted.
   [skills.sh: npm for Agent Skills](https://dev.to/stevengonsalvez/skillssh-npm-for-agent-skills-35jc)
 - [Claude Code skills, on the listing budget](https://code.claude.com/docs/en/skills)
 - [Agent Skills specification](https://agentskills.io/specification)
+- Nicolas Dao,
+  [The honest landscape](https://happyskills.ai/blog/claude-skills-marketplace/#the-honest-landscape),
+  2026-07-06
