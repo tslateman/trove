@@ -4,6 +4,28 @@ Notable changes to Trove. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version
 numbers follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.1 - 2026-08-29
+
+### Added
+
+- The changelog ships in the Docs tab, beside the roadmap.
+- The landscape survey records the wider field: the platforms a July 2026
+  survey names, and what it says about directories that advertise their size.
+
+### Changed
+
+- A task list renders as checkboxes. The roadmap tracks twenty items with
+  `- [ ]` and `- [x]`, and the viewer printed the brackets as text.
+- Always-on counts read in body text rather than green.
+
+### Fixed
+
+- A list item written across several lines stays one bullet. The roadmap,
+  written that way throughout, had been breaking into bullets and stray
+  paragraphs.
+- Form controls follow the page theme. The page declared no `color-scheme`, so
+  checkboxes and text fields rendered light against the dark theme.
+
 ## 0.1.0 - 2026-08-28
 
 First public release. Trove reads skills from the repos that own them, prices
