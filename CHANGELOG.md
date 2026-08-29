@@ -4,6 +4,14 @@ Notable changes to Trove. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version
 numbers follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.2 - 2026-08-29
+
+### Added
+
+- The landscape survey compares six registries. APM and JFrog's Agent Skills
+  Registry join Trove, PostHog, Tessl, and skills.sh, and the safety row now
+  carries three entries where it carried two.
+
 ## 0.1.1 - 2026-08-29
 
 ### Added

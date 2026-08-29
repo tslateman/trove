@@ -5,41 +5,44 @@ label: Landscape
 
 # The skill registry landscape
 
-Four registries, four answers to how a skill reaches a session. This page
-records what each one does and what each one measures, as surveyed on
-2026-08-27. Trove's own mechanics are in the [README](../README.md).
+Six registries, six answers to how a skill reaches a session. This page records
+what each one does and what each one measures. The first four were surveyed on
+2026-08-27; APM and the JFrog registry were added 2026-08-29. Trove's own
+mechanics are in the [README](../README.md).
 
 ## The registries this compares against
 
-| Product       | The answer it gives                                             |
-| ------------- | --------------------------------------------------------------- |
-| **Trove**     | Generate a marketplace from repos that already own their skills |
-| **PostHog**   | Never land the skill on disk; serve it from a store over MCP    |
-| **Tessl**     | A package manager with a manifest, plus scoring attached        |
-| **skills.sh** | GitHub is the registry; `npx skills add` copies the folder in   |
+| Product       | The answer it gives                                                          |
+| ------------- | ---------------------------------------------------------------------------- |
+| **Trove**     | Generate a marketplace from repos that already own their skills              |
+| **PostHog**   | Never land the skill on disk; serve it from a store over MCP                 |
+| **Tessl**     | A package manager with a manifest, plus scoring attached                     |
+| **skills.sh** | GitHub is the registry; `npx skills add` copies the folder in                |
+| **APM**       | A package manager for agent primitives, installed from any git repo          |
+| **JFrog**     | An enterprise registry that scans and signs a skill before an agent pulls it |
 
 ## Getting a skill into a session
 
-|                         | Trove                                                       | PostHog                  | Tessl                                      | skills.sh                            |
-| ----------------------- | ----------------------------------------------------------- | ------------------------ | ------------------------------------------ | ------------------------------------ |
-| Source of truth         | Upstream git repo                                           | PostHog database         | Tessl registry                             | Any public git repo                  |
-| Install                 | `claude plugin install` from a generated `marketplace.json` | Never; served per call   | `tessl install workspace/plugin[@version]` | `npx skills add owner/repo`          |
-| Lands at                | Claude Code's plugin directory                              | Nowhere                  | `.tessl/plugins/` or `~/.tessl/`           | `.claude/skills/`, project or global |
-| Pinned by               | Commit sha, resolved at build                               | Immutable version number | Version in `tessl.json`                    | No pin syntax documented             |
-| Publish step            | None — a bundle composes what repos already own             | Web UI or `skill-create` | `tessl skill publish`, lints first         | None; install telemetry surfaces it  |
-| Read without installing | Yes, via `skills/trove`                                     | Yes                      | No                                         | No                                   |
-| Runtime dependency      | None installed; the reader adds catalog host and GitHub     | PostHog uptime           | None after install                         | None after install                   |
+|                         | Trove                                                       | PostHog                  | Tessl                                      | skills.sh                            | APM                                              | JFrog                                                                 |
+| ----------------------- | ----------------------------------------------------------- | ------------------------ | ------------------------------------------ | ------------------------------------ | ------------------------------------------------ | --------------------------------------------------------------------- |
+| Source of truth         | Upstream git repo                                           | PostHog database         | Tessl registry                             | Any public git repo                  | Any git repo, or a local path                    | JFrog AI Catalog                                                      |
+| Install                 | `claude plugin install` from a generated `marketplace.json` | Never; served per call   | `tessl install workspace/plugin[@version]` | `npx skills add owner/repo`          | `apm install owner/repo#ref`                     | Not documented publicly                                               |
+| Lands at                | Claude Code's plugin directory                              | Nowhere                  | `.tessl/plugins/` or `~/.tessl/`           | `.claude/skills/`, project or global | Every harness it detects, plus `.agents/skills/` | Not documented                                                        |
+| Pinned by               | Commit sha, resolved at build                               | Immutable version number | Version in `tessl.json`                    | No pin syntax documented             | `apm.lock.yaml`, versions and content hashes     | "Automatically versioned"; no pin syntax documented                   |
+| Publish step            | None — a bundle composes what repos already own             | Web UI or `skill-create` | `tessl skill publish`, lints first         | None; install telemetry surfaces it  | None; installs from the repo                     | Upload, scanned and signed on the way in                              |
+| Read without installing | Yes, via `skills/trove`                                     | Yes                      | No                                         | No                                   | Not documented                                   | Semantic search over the catalog; install-free reading not documented |
+| Runtime dependency      | None installed; the reader adds catalog host and GitHub     | PostHog uptime           | None after install                         | None after install                   | None documented                                  | Not documented                                                        |
 
 ## What the catalog tells you before you commit
 
-|                   | Trove                           | PostHog | Tessl                           | skills.sh                     |
-| ----------------- | ------------------------------- | ------- | ------------------------------- | ----------------------------- |
-| Does it work      | Planned                         | —       | Quality rubric and a judged A/B | —                             |
-| Is it safe        | Planned                         | —       | Snyk score and install policies | "Read them before installing" |
-| What does it cost | Tokens, always-on and on invoke | —       | —                               | —                             |
-| Does it fire      | Planned                         | —       | —                               | —                             |
+|                   | Trove                           | PostHog | Tessl                           | skills.sh                     | APM                                                                             | JFrog                                                                          |
+| ----------------- | ------------------------------- | ------- | ------------------------------- | ----------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Does it work      | Planned                         | —       | Quality rubric and a judged A/B | —                             | —                                                                               | —                                                                              |
+| Is it safe        | Planned                         | —       | Snyk score and install policies | "Read them before installing" | Scans every primitive for hidden Unicode; a critical finding blocks the install | Scans for vulnerabilities and malicious behaviour, then signs what it approves |
+| What does it cost | Tokens, always-on and on invoke | —       | —                               | —                             | —                                                                               | —                                                                              |
+| Does it fire      | Planned                         | —       | —                               | —                             | —                                                                               | —                                                                              |
 
-Tessl measures behavior; the other three publish no behavior measurement.
+Tessl measures behavior; the other five publish no behavior measurement.
 `tessl scenario generate` builds validated scenarios, the agent solves each one
 twice — once without the skill and once with it — and a judge scores both
 against a per-scenario rubric. The published example reads 71% to 92%. The
@@ -76,9 +79,9 @@ scan. Trove's eval and security items are unstarted.
 
 ## The wider field
 
-This page compares four registries closely. The field is larger. A survey
-published 2026-07-06 names Microsoft APM, Agensi, skild.sh, and JFrog's Skills
-Registry beside Tessl and skills.sh, and reports browse-only directories
+This page compares six registries closely. The field is larger. A survey
+published 2026-07-06 names Agensi and skild.sh beside the six above, and
+reports browse-only directories
 advertising roughly 12,000, 21,000, and 2 million skills. It calls those counts
 self-reported and "almost always indexing artifacts", then answers them: "A big
 number tells you nothing about whether the one skill you actually need installs
@@ -98,6 +101,9 @@ carries places its own author's product first.
   [skills.sh: npm for Agent Skills](https://dev.to/stevengonsalvez/skillssh-npm-for-agent-skills-35jc)
 - [Claude Code skills, on the listing budget](https://code.claude.com/docs/en/skills)
 - [Agent Skills specification](https://agentskills.io/specification)
+- [APM install reference](https://microsoft.github.io/apm/consumer/install-packages/),
+  [APM](https://microsoft.github.io/apm/)
+- [JFrog Agent Skills Registry](https://jfrog.com/ai-catalog/skills-registry/)
 - Nicolas Dao,
   [The honest landscape](https://happyskills.ai/blog/claude-skills-marketplace/#the-honest-landscape),
   2026-07-06

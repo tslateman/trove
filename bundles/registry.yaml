@@ -27,6 +27,6 @@ plugins:
 
   - name: trove
     source: trove
-    version: 0.1.1
+    version: 0.1.2
     category: productivity
     description: "Read skills from a Trove catalog without installing them: list what the registry holds, fetch one skill's instructions at its pinned commit, and see what installing it would cost in context."
