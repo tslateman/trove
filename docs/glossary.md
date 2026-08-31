@@ -9,13 +9,22 @@ publishes a Claude Code marketplace. This page defines the words the catalog and
 the commands use, in the order you meet them. The
 [getting started guide](getting-started.md) builds a registry with them.
 
+The terms here are Trove's own. The vocabulary they rest on — token, context
+window, session, skill — is general to AI coding, and the
+[AI Coding Dictionary](https://github.com/mattpocock/dictionary-of-ai-coding)
+defines it in plain English, so this page links into it rather than restating
+it.
+
 ## What a registry is made of
 
 ### Skill
 
 A directory holding `SKILL.md`: frontmatter that names the skill and says when
 it fires, plus a body Claude Code reads once it does. The unit this catalog
-indexes.
+indexes. The
+[dictionary's entry](https://github.com/mattpocock/dictionary-of-ai-coding#skill)
+draws the line worth keeping: a skill is instructions the agent _reads_, not a
+tool it _calls_.
 
 ### Source
 
@@ -55,6 +64,19 @@ name, which is why `marketplace:` exists in the bundle: it records that name
 when it differs from the bundle's own.
 
 ## What it costs
+
+The three prices below are the three layers of what the dictionary calls
+[progressive disclosure](https://github.com/mattpocock/dictionary-of-ai-coding#progressive-disclosure):
+a description every session carries, a body read when the skill fires, and
+files behind
+[context pointers](https://github.com/mattpocock/dictionary-of-ai-coding#context-pointer)
+the body may or may not follow. Only the first is unconditional, and it costs
+twice: billed as
+[input tokens](https://github.com/mattpocock/dictionary-of-ai-coding#input-tokens)
+on every request, and spending
+[attention budget](https://github.com/mattpocock/dictionary-of-ai-coding#attention-budget)
+whether or not the skill ever fires. That double charge is why the catalog
+prices the always-on column at all.
 
 ### Always-on
 
