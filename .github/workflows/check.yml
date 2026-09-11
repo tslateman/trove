@@ -14,7 +14,9 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --all-groups
+      - run: npx --yes prettier@3 --check '*.md' 'docs/*.md'
       - run: uv run pytest -q
+      - run: uv run trove --bundle bundles/demo.yaml --offline drift
 
   verify-ui:
     runs-on: ubuntu-latest
