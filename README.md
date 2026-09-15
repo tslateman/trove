@@ -68,9 +68,11 @@ just calibrate skills skills@local   # check estimates against Claude Code
 `just --list` shows the rest. Every recipe takes its bundle from the `bundle`
 variable, so `just --set bundle bundles/team.yaml catalog` targets another one.
 
-Two bundles ship with the repo. `example.yaml` is a commented starter to copy,
-and `demo.yaml` points at a fixture repo under `tests/fixtures` so CI and
-`just verify` have a hermetic target.
+Five bundles ship with the repo. `example.yaml` is a commented starter to
+copy, and `demo.yaml` points at a fixture repo under `tests/fixtures` so CI
+and `just verify` have a hermetic target. `registry.yaml`, `twins.yaml`, and
+`lint.yaml` back the `just gifs` recordings; see below for how each one is
+used.
 
 Your own registry lives in `bundles/local.yaml`, which every recipe reads by
 default and `.gitignore` keeps out of the repo:
