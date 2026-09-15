@@ -61,7 +61,7 @@ Measured with `trove`'s own estimator:
 
 | Subject                                       | Always-on | On invoke |
 | --------------------------------------------- | --------- | --------- |
-| Trove reader, `skills/trove`                  | 111       | 1,451     |
+| Trove reader, `skills/trove`                  | 111       | 1,433     |
 | PostHog bridge, `skills-store`                | 82        | 3,819     |
 | Every skill in the published registry, all 58 | 7,641     | —         |
 

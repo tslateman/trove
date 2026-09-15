@@ -1685,3 +1685,25 @@ def test_every_link_between_doc_pages_lands_on_a_real_heading():
             elif anchor and anchor not in slugs[name]:
                 broken.append(f"{page.name} -> {target} (no such heading)")
     assert not broken, "\n".join(broken)
+
+
+def test_landscape_table_matches_measured_trove_reader_tokens():
+    """docs/landscape.md:64 quotes trove's own scan of skills/trove; keep it live."""
+    import re
+
+    source = Source(key="trove")
+    skills = scan_source(source, root=Path("skills"))
+    reader = next(s for s in skills if s.rel_path == "trove")
+
+    line = next(
+        line
+        for line in Path("docs/landscape.md").read_text().splitlines()
+        if "Trove reader, `skills/trove`" in line
+    )
+    always_on, on_invoke = (
+        int(cell.strip().replace(",", ""))
+        for cell in re.findall(r"\|\s*([\d,]+)\s*(?=\|)", line)
+    )
+
+    assert always_on == reader.tokens_always_on
+    assert on_invoke == reader.tokens_on_invoke
