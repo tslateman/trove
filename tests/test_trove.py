@@ -931,6 +931,43 @@ def test_a_qualified_annotated_tag_peels_to_its_commit(tmp_path):
         assert resolve_sha(Source(key="s", url=str(work), ref=ref)) == commit
 
 
+def test_concurrent_materialize_calls_do_not_share_a_staging_dir(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from trove.fetch import materialize
+
+    work = _remote_repo(tmp_path)
+    sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=work,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    source = Source(key="s", url=str(work), ref="main")
+    dest = tmp_path / "dest"
+
+    results = []
+
+    def run(_n):
+        try:
+            materialize(source, sha, dest)
+            results.append("ok")
+        except Exception as exc:
+            results.append(exc)
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(pool.map(run, range(4)))
+
+    assert "ok" in results
+    for r in results:
+        assert r == "ok" or (
+            isinstance(r, OSError) and not isinstance(r, FileExistsError)
+        ), results
+    assert (dest / ".git").exists()
+    assert list(tmp_path.glob(".dest.*.partial")) == []
+
+
 # --- resolving a skill body ---
 
 
@@ -1269,7 +1306,9 @@ def test_promote_lands_under_skills_when_the_source_keeps_one(tmp_path):
 
     root = tmp_path / "repo"
     (root / "skills" / "review").mkdir(parents=True)
-    personal = _skill(tmp_path / "personal", "tidy", "Tidy code. Use when asked to tidy.")
+    personal = _skill(
+        tmp_path / "personal", "tidy", "Tidy code. Use when asked to tidy."
+    )
     (personal / "__pycache__").mkdir()
     (personal / "__pycache__" / "x.pyc").write_bytes(b"")
 
@@ -1287,7 +1326,9 @@ def test_promote_lands_at_the_root_of_a_flat_source(tmp_path):
 
     root = tmp_path / "flat"
     _skill(root, "other", "Other. Use when other.")
-    personal = _skill(tmp_path / "personal", "tidy", "Tidy code. Use when asked to tidy.")
+    personal = _skill(
+        tmp_path / "personal", "tidy", "Tidy code. Use when asked to tidy."
+    )
 
     dest, _ = promote(personal, Source(key="team", local=root))
 
@@ -1320,7 +1361,12 @@ def test_promote_surfaces_lint_findings_on_the_copy(tmp_path):
 # --- what this machine has installed ---
 
 ENTRIES = [
-    {"id": "toolkit@acme-plugins", "version": "0.1.0", "scope": "user", "enabled": True},
+    {
+        "id": "toolkit@acme-plugins",
+        "version": "0.1.0",
+        "scope": "user",
+        "enabled": True,
+    },
     {
         "id": "toolkit@acme-plugins",
         "version": "0.2.0",
@@ -1328,8 +1374,18 @@ ENTRIES = [
         "enabled": False,
         "projectPath": "/repo",
     },
-    {"id": "review-kit@acme-plugins", "version": "0.1.0", "scope": "user", "enabled": False},
-    {"id": "platform@somewhere-else", "version": "1.0.0", "scope": "user", "enabled": True},
+    {
+        "id": "review-kit@acme-plugins",
+        "version": "0.1.0",
+        "scope": "user",
+        "enabled": False,
+    },
+    {
+        "id": "platform@somewhere-else",
+        "version": "1.0.0",
+        "scope": "user",
+        "enabled": True,
+    },
 ]
 OFFERED = {"toolkit", "review-kit", "drafts"}
 CATALOG = {

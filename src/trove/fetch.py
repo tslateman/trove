@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -82,8 +83,7 @@ def slug(url: str) -> str:
 
 def materialize(source: Source, sha: str, dest: Path) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
-    staging = dest.parent / f".{dest.name}.partial"
-    shutil.rmtree(staging, ignore_errors=True)
+    staging = dest.parent / f".{dest.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.partial"
     staging.mkdir(parents=True)
     try:
         _git_checked("init", "--quiet", str(staging))
@@ -144,7 +144,11 @@ class Workspace:
         if source.local is not None and source.local.exists():
             return source.local
         if self.cache is None or not (source.repo or source.url):
-            return local_root(source.key, source.local) if source.local is not None else None
+            return (
+                local_root(source.key, source.local)
+                if source.local is not None
+                else None
+            )
         if source.local is not None:
             self.notes.append(
                 f"{source.key}: local path {source.local} does not exist, "
