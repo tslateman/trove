@@ -1629,3 +1629,19 @@ def test_every_link_between_doc_pages_lands_on_a_real_heading():
             elif anchor and anchor not in slugs[name]:
                 broken.append(f"{page.name} -> {target} (no such heading)")
     assert not broken, "\n".join(broken)
+
+
+def test_readme_bundle_count_matches_what_git_tracks():
+    """README.md:71 claimed two bundles ship while git tracked five."""
+    tracked = subprocess.run(
+        ["git", "ls-files", "bundles/"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split()
+    names = [Path(path).name for path in tracked]
+
+    intro = Path("README.md").read_text().split("Your own registry lives")[0]
+    assert "Two bundles ship with the repo" not in intro
+    for name in names:
+        assert name in intro, f"{name} ships but isn't named in the README intro"
