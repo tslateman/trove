@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .lint import findings
+from .risk import Risk
 
 CHARS_PER_TOKEN_FRONTMATTER = 3.03
 FRONTMATTER_OVERHEAD = 4.3
@@ -51,6 +52,7 @@ class Skill:
     bundled_files: int = 0
     bundled_chars: int = 0
     category_is_fallback: bool = False
+    risk: Risk = field(default_factory=Risk)
 
     @property
     def tokens_always_on(self) -> int:
@@ -83,6 +85,7 @@ class Skill:
             "bundledFiles": self.bundled_files,
             "tokensBundledMax": self.tokens_bundled_max,
             "lint": self.lint,
+            "risk": self.risk.to_dict(),
         }
 
 

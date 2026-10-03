@@ -106,6 +106,23 @@ description that never says when it fires, a name the spec refuses, or YAML
 that fails a strict parse. Each finding has a fix in
 [Troubleshooting](troubleshooting.md#the-catalog-looks-wrong).
 
+### Reaches
+
+What a static parse found a skill reaching for, shown on the card beside the
+token cost. The parse counts shell command lines in a `bash`, `sh`, `shell`,
+or `zsh` fence and in a bundled shell script; network calls (`curl`, `wget`,
+an `http` or `https` URL, and call-shaped names such as `fetch(` and
+`WebFetch`); and credential paths such as `~/.ssh`, `.env`, or
+`credentials.json`. The word "credentials" in a sentence is not a path, and
+the word "fetch" is not a call.
+
+When the skill declares `allowed-tools`, the card shows how many tools that
+list names. That count is the breadth. There is no cutoff for "too broad",
+and a skill that leaves the field off is not treated as wide open. The field
+is simply not declared.
+
+The column reports. It does not block a build or an install.
+
 ## How to read these pages
 
 ### AI draft

@@ -75,7 +75,8 @@ installed there keeps its always-on slice.
 
 Tessl scores what Trove's roadmap lists as open. Publishing runs quality scoring,
 `tessl eval run` runs standalone, and `tessl review run security` runs a Snyk
-scan. Trove's eval and security items are unstarted.
+scan. Trove's eval items are unstarted. The catalog reports a static risk scan
+beside token cost; policy, provenance, and an install audit are still open.
 
 ## The wider field
 

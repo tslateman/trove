@@ -7,6 +7,7 @@ import yaml
 from . import frontmatter
 from .fetch import local_root
 from .models import Skill, Source
+from .risk import assess, declared_tools
 
 
 def read_metadata(text: str) -> tuple[dict[str, str], str]:
@@ -62,14 +63,16 @@ def category_for(rel_path: str, source_key: str) -> tuple[str, bool]:
     return source_key, True
 
 
-def bundled(skill_dir: Path) -> tuple[int, int]:
+def bundled(skill_dir: Path) -> tuple[int, int, list[tuple[str, str]]]:
     """Count the files shipped beside SKILL.md and the chars of the text ones.
 
     A binary ships but never loads as text, so it counts as a file and
-    contributes nothing to the estimate.
+    contributes nothing to the estimate. Text files are returned so the
+    risk parse can read them without a second walk.
     """
     files = 0
     chars = 0
+    texts: list[tuple[str, str]] = []
     for path in sorted(skill_dir.rglob("*")):
         if not path.is_file() or path.name == "SKILL.md":
             continue
@@ -78,10 +81,12 @@ def bundled(skill_dir: Path) -> tuple[int, int]:
             continue
         files += 1
         try:
-            chars += len(path.read_text(encoding="utf-8"))
+            text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-    return files, chars
+        chars += len(text)
+        texts.append((path.name, text))
+    return files, chars, texts
 
 
 def scan_source(source: Source, root: Path | None = None) -> list[Skill]:
@@ -98,8 +103,9 @@ def scan_source(source: Source, root: Path | None = None) -> list[Skill]:
         meta, body = read_metadata(text)
         name = meta.get("name") or skill_file.parent.name
         description = meta.get("description", "").strip()
-        files, chars = bundled(skill_file.parent)
+        files, chars, texts = bundled(skill_file.parent)
         category, category_is_fallback = category_for(rel_dir, source.key)
+        strict = strict_yaml_parse(text)
         skills.append(
             Skill(
                 name=name,
@@ -113,6 +119,11 @@ def scan_source(source: Source, root: Path | None = None) -> list[Skill]:
                 strict_yaml=strict_yaml_ok(text),
                 bundled_files=files,
                 bundled_chars=chars,
+                risk=assess(
+                    body,
+                    texts,
+                    declared_tools(meta, strict if isinstance(strict, dict) else None),
+                ),
             )
         )
     return skills

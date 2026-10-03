@@ -167,7 +167,7 @@ a.plain:hover .pill { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- list ---------- */
 .list { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); overflow: hidden; }
-.cols { grid-template-columns: 40px 34px minmax(0, 1fr) 112px 112px 140px 104px 36px; }
+.cols { grid-template-columns: 40px 34px minmax(0, 1fr) 112px 112px 140px 104px 156px 36px; }
 .listhead {
   display: grid; align-items: center; gap: 0 10px; padding: 0 6px 0 2px; border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--bg) 60%, var(--panel));
@@ -209,6 +209,8 @@ a.plain:hover .pill { border-color: var(--accent); color: var(--accent); }
 .num { font: 13px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .num.on { font-weight: 600; }
 .num.dim { color: var(--muted); opacity: .6; }
+.reach { font: 12px/1.35 var(--mono); white-space: normal; }
+.reach.dim { color: var(--muted); opacity: .6; }
 .more { border: 0; background: none; color: var(--muted); cursor: pointer; display: grid; place-items: center; border-radius: 6px; }
 .more:hover { color: var(--accent); background: var(--accent-soft); }
 .more svg { transition: transform .15s; }
@@ -368,9 +370,9 @@ a.plain:hover .pill { border-color: var(--accent); color: var(--accent); }
   .cols { grid-template-columns: 36px minmax(0, 1fr) 32px; }
   .rank { display: none; }
   .row .costs { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px 12px; padding-top: 0; }
-  .row .costs .num::before { content: attr(data-label) " "; color: var(--muted); font-weight: 400; }
-  .row .costs .num { text-align: left; }
-  .row .costs .num.dim { display: none; }
+  .row .costs .num::before, .row .costs .reach::before { content: attr(data-label) " "; color: var(--muted); font-weight: 400; }
+  .row .costs .num, .row .costs .reach { text-align: left; }
+  .row .costs .num.dim, .row .costs .reach.dim { display: none; }
   .detail { padding-left: 12px; }
   .pcols { grid-template-columns: minmax(0, 1fr); }
   .row.plugin > * { padding-top: 6px; padding-bottom: 6px; }
@@ -433,6 +435,7 @@ a.plain:hover .pill { border-color: var(--accent); color: var(--accent); }
         <button data-sort="on" class="num" title="Name and description, in the prompt every session whether or not the skill fires">Always-on</button>
         <button data-sort="fire" class="num" title="The SKILL.md body, read only when the skill fires">When it fires</button>
         <button data-sort="files" class="num" title="Files beside SKILL.md, each read only if the body sends the skill to it">Bundled</button>
+        <span class="reach" title="Static parse of shell command lines, network calls, credential paths, and allowed-tools breadth. Reported, not enforced.">Reaches</span>
         <span></span>
       </div>
       <div id="grid" role="list"></div>
@@ -1079,7 +1082,8 @@ function renderLegend() {
   $("legend").innerHTML =
     `Only <b>${docLink("always-on", "glossary.md#always-on")}</b> is charged every session. A body loads ` +
     `${docLink("when the skill fires", "glossary.md#when-it-fires")}, and a ` +
-    `${docLink("bundled file", "glossary.md#bundled-files")} only if the body sends it there.`;
+    `${docLink("bundled file", "glossary.md#bundled-files")} only if the body sends it there. ` +
+    `${docLink("Reaches", "glossary.md#reaches")} sits beside that cost: a static parse, not a gate.`;
 }
 
 function renderList(shown, total) {
@@ -1127,6 +1131,7 @@ function skillRow(s, rank) {
       ${s.bundledFiles
         ? `<span class="num" data-label="bundled" title="${s.bundledFiles} file${s.bundledFiles === 1 ? "" : "s"} beside SKILL.md, each read only if the body sends the skill to it">${s.bundledFiles} · ≤${k(s.tokensBundledMax)}</span>`
         : '<span class="num dim" data-label="bundled">—</span>'}
+      ${riskCell(s)}
     </div>
     <button type="button" class="more" aria-expanded="${state.open.has(key)}" aria-label="Details for ${escapeHtml(s.name)}">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
@@ -1139,6 +1144,7 @@ function skillRow(s, rank) {
         ${(s.tags || []).length ? `<dt>Tags</dt><dd>${s.tags.map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("")}</dd>` : ""}
         ${s.lint.length ? `<dt>Lint</dt><dd>${s.lint.map(c => `<span class="pill lint">${escapeHtml(c)}</span>`).join("")}</dd>` : ""}
         <dt>Cost</dt><dd>+${s.tokensAlwaysOn} tokens every session · ${s.tokensOnInvoke.toLocaleString()} when it fires${s.bundledFiles ? ` · up to ${s.tokensBundledMax.toLocaleString()} across ${s.bundledFiles} bundled file${s.bundledFiles === 1 ? "" : "s"}` : ""}</dd>
+        <dt>Reaches</dt><dd>${escapeHtml(riskTitle(s.risk))}</dd>
       </dl>
       <div class="acts">
         <button type="button" class="btn pickbtn">${picked ? "Remove from stack" : "Add to stack"}</button>
@@ -1155,6 +1161,36 @@ function skillRow(s, rank) {
   });
   row.querySelector(".more").onclick = () => toggleOpen(key);
   return row;
+}
+
+// Counts from the static parse. No score, and no cutoff on how many tools
+// is "broad": a declared list shows its length, and a missing list stays missing.
+function riskParts(risk) {
+  if (!risk) return [];
+  const parts = [];
+  if (risk.bash) parts.push(risk.bash === 1 ? "bash" : "bash " + risk.bash);
+  if (risk.network) parts.push(risk.network === 1 ? "net" : "net " + risk.network);
+  if (risk.credentials) parts.push(risk.credentials === 1 ? "creds" : "creds " + risk.credentials);
+  if (Array.isArray(risk.allowedTools)) parts.push("tools " + risk.allowedTools.length);
+  return parts;
+}
+
+function riskTitle(risk) {
+  const found = risk || {};
+  const tools = Array.isArray(found.allowedTools)
+    ? (found.allowedTools.length ? found.allowedTools.join(", ") + " (" + found.allowedTools.length + ")" : "declared, empty")
+    : "not declared";
+  return "Static parse, not a gate. Shell command lines: " + (found.bash || 0) +
+    ". Network calls: " + (found.network || 0) +
+    ". Credential paths: " + (found.credentials || 0) +
+    ". allowed-tools: " + tools + ".";
+}
+
+function riskCell(s) {
+  const parts = riskParts(s.risk);
+  const title = escapeHtml(riskTitle(s.risk));
+  if (!parts.length) return `<span class="reach dim" data-label="reaches" title="${title}">—</span>`;
+  return `<span class="reach" data-label="reaches" title="${title}">${parts.map(escapeHtml).join(" · ")}</span>`;
 }
 
 // Each finding has a fix, and the fix has a heading in the troubleshooting page.

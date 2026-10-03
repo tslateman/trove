@@ -35,7 +35,8 @@ XSS_PROBE = """() => {
   const probe = '<img src=x onerror="window.__pwned=1">';
   state.data.skills.push({name: probe, description: probe, category: probe, tags: [probe],
     path: 'probe', source: 'probe', tokensAlwaysOn: 1, tokensOnInvoke: 1,
-    bundledFiles: 1, tokensBundledMax: 1, categoryIsFallback: false, lint: [probe], plugins: [probe]});
+    bundledFiles: 1, tokensBundledMax: 1, categoryIsFallback: false, lint: [probe], plugins: [probe],
+    risk: {bash: 0, network: 0, credentials: 0, allowedTools: null}});
   render();
   const injected = document.querySelectorAll(
     '#view-skills img, #view-plugins img, #view-atlas img, #stack img').length;
@@ -47,7 +48,7 @@ XSS_PROBE = """() => {
 TWIN_PROBE = """() => {
   const base = {name: 'twin', description: 'd', category: 'twin-probe', tags: [],
     tokensAlwaysOn: 1, tokensOnInvoke: 1, bundledFiles: 0, tokensBundledMax: 0,
-    lint: [], plugins: []};
+    lint: [], plugins: [], risk: {bash: 0, network: 0, credentials: 0, allowedTools: null}};
   const a = Object.assign({}, base, {source: 'one', path: 'skills/a/twin'});
   const b = Object.assign({}, base, {source: 'two', path: 'skills/b/twin'});
   state.data.skills.push(a, b);
