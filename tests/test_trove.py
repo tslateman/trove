@@ -412,6 +412,94 @@ def test_a_bare_skill_bundles_nothing(tmp_path):
     assert skill.tokens_bundled_max == 0
 
 
+def test_a_quiet_skill_has_an_empty_risk_report(tmp_path):
+    d = tmp_path / "skills" / "c" / "quiet"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        "---\nname: quiet\ndescription: Rewrites a paragraph. Use when asked.\n---\n\n"
+        "Fetch the notes, and do not read credentials.\n"
+    )
+    skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
+    assert skill.risk.to_dict() == {
+        "bash": 0,
+        "network": 0,
+        "credentials": 0,
+        "allowedTools": None,
+    }
+
+
+def test_risk_counts_shell_network_and_credential_paths(tmp_path):
+    d = tmp_path / "skills" / "c" / "reach"
+    (d / "scripts").mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        "---\n"
+        "name: reach\n"
+        "description: Ships a command. Use when asked.\n"
+        "allowed-tools: Bash(git:*) Read, Grep\n"
+        "---\n"
+        "\n"
+        "```bash\n"
+        "# comment\n"
+        "echo hi\n"
+        "curl https://example.com/x\n"
+        "```\n"
+        "\n"
+        "Copy .env and ~/.ssh/id_rsa, and read credentials.json.\n"
+        "fetch(url) after you fetch the notes.\n"
+    )
+    (d / "scripts" / "run.sh").write_text("#!/bin/bash\necho shipped\n")
+    skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
+    assert skill.risk.bash == 3
+    assert skill.risk.network == 3
+    assert skill.risk.credentials == 3
+    assert skill.risk.allowed_tools == ("Bash", "Read", "Grep")
+    assert skill.to_dict()["risk"]["allowedTools"] == ["Bash", "Read", "Grep"]
+
+
+def test_allowed_tools_list_is_breadth_not_a_bash_invocation(tmp_path):
+    d = tmp_path / "skills" / "c" / "listed"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        "---\n"
+        "name: listed\n"
+        "description: Names tools. Use when asked.\n"
+        "allowed-tools:\n"
+        "  - Bash\n"
+        "  - WebFetch\n"
+        "---\n"
+        "\n"
+        "Rewrite the paragraph.\n"
+    )
+    skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
+    assert skill.risk.bash == 0
+    assert skill.risk.network == 0
+    assert skill.risk.allowed_tools == ("Bash", "WebFetch")
+
+
+def test_an_empty_allowed_tools_field_is_declared(tmp_path):
+    d = tmp_path / "skills" / "c" / "empty"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        "---\nname: empty\ndescription: Declares nothing. Use when asked.\n"
+        "allowed-tools:\n"
+        "---\n"
+        "body\n"
+    )
+    skill = scan_source(Source(key="s", repo="o/s", local=tmp_path))[0]
+    assert skill.risk.allowed_tools == ()
+
+
+def test_the_card_shows_the_risk_signal_beside_the_token_cost():
+    page = Path("src/trove/web/index.html").read_text()
+    header = page.split('id="listhead"', 1)[1].split("</div>", 1)[0]
+    assert header.index("Always-on") < header.index("Reaches")
+    row = page.split("function skillRow", 1)[1].split("function riskParts", 1)[0]
+    costs = row.split('<div class="costs">', 1)[1].split('class="more"', 1)[0]
+    assert "tokensAlwaysOn" in costs and "riskCell(s)" in costs
+    assert costs.index("tokensAlwaysOn") < costs.index("riskCell(s)")
+    assert "Reaches" in row.split("<dl>", 1)[1]
+
+
 def test_tolerant_parser_still_wins_when_strict_yaml_fails(tmp_path):
     d = tmp_path / "skills" / "c" / "loose"
     d.mkdir(parents=True)

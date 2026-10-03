@@ -4,6 +4,14 @@ Notable changes to Trove. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version
 numbers follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- The catalog card reports a static risk scan beside token cost: shell command
+  lines, network calls, credential paths, and `allowed-tools` breadth. It
+  reports. It does not gate.
+
 ## 0.1.2 - 2026-08-29
 
 ### Added

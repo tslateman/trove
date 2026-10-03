@@ -68,7 +68,7 @@ sha; it never asks what a skill is allowed to do. A bundle can install a skill
 that shells out, reads credentials, or reaches the network, and the catalog card
 looks the same as one that rewrites a paragraph.
 
-- [ ] **Static risk scan.** Parse each skill for what it reaches for — `Bash`
+- [x] **Static risk scan.** Parse each skill for what it reaches for — `Bash`
       invocations, network calls, credential paths, `allowed-tools` breadth —
       and surface a risk signal on the card next to the token cost.
 - [ ] **Policy gating at build.** Let a bundle declare what it refuses to ship,

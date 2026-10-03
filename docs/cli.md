@@ -81,7 +81,11 @@ wrote out/catalog.json: 56 skills, ~7,329 tok always-on
 ```
 
 `catalog.json` carries every skill with its token costs, category, tags, owning
-plugins, and lint state, plus the orphans no plugin ships. A skill name that
+plugins, and lint state, plus the orphans no plugin ships. Each skill also
+carries `risk`: counts of shell command lines, network calls, and credential
+paths in the body and bundled text, and the `allowed-tools` list when the
+skill declares one (`null` when it does not). The card shows that beside the
+token cost. It reports; it does not gate. A skill name that
 more than one source ships is a twin; `just twins` lists each pair with the
 always-on price per side, and the site's Shipped twice filter shows the same
 set.
